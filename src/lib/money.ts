@@ -162,3 +162,14 @@ export function toRupeeInput(paise: Paise): string {
   const frac = rem === 0 ? '' : `.${String(rem).padStart(2, '0').replace(/0$/, '')}`
   return `${paise < 0 ? '-' : ''}${Math.floor(abs / 100)}${frac}`
 }
+
+/** Tiny amount for crowded places such as calendar cells: ₹450, ₹1.2k, ₹3L, ₹1.5Cr (Indian units). */
+export function formatCompact(paise: Paise): string {
+  assertPaise(paise)
+  const sign = paise < 0 ? '-' : ''
+  const rupees = Math.abs(paise) / 100
+  if (rupees < 999.5) return `${sign}₹${Math.round(rupees)}` // 999.5 and up would round to 1000: show it as ₹1k
+  const [div, unit] = rupees >= 1e7 ? [1e7, 'Cr'] : rupees >= 1e5 ? [1e5, 'L'] : [1e3, 'k']
+  const v = Math.round((rupees / (div as number)) * 10) / 10
+  return `${sign}₹${Number.isInteger(v) ? v : v.toFixed(1)}${unit}`
+}
