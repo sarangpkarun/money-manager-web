@@ -168,4 +168,46 @@ describe('Home dashboard', () => {
     ui()
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
   })
+
+  const ageing = { current: 50_000, d1_30: 20_000, d31_60: 0, d61_plus: 30_000 }
+  const withMoney = () => dash({
+    people: { owed_to_me: 100_000, overdue_owed_to_me: 50_000, ageing_owed_to_me: ageing, i_owe: 40_000, overdue_i_owe: 0, ageing_i_owe: { current: 40_000, d1_30: 0, d31_60: 0, d61_plus: 0 }, open_count: 3 },
+    net_position: { assets: 500_000, card_outstanding: 200_000, owed_to_me: 100_000, i_owe: 40_000 },
+  })
+
+  it('Net position adds accounts and money owed, and subtracts what you owe and card bills', async () => {
+    const user = userEvent.setup()
+    m.data = withMoney()
+    ui()
+    const card = screen.getByRole('region', { name: 'Net position' })
+    expect(card).toHaveTextContent('₹3,600') // 5,000 + 1,000 - 400 - 2,000
+    expect(card).toHaveTextContent('In your accounts')
+    expect(card).toHaveTextContent('Card bills')
+    await user.click(within(card).getByRole('button', { name: 'Money' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/money')
+  })
+
+  it('Money with people shows totals, overdue and ageing buckets for each side', () => {
+    m.data = withMoney()
+    ui()
+    const card = screen.getByRole('region', { name: 'Money with people' })
+    const owed = within(card).getByRole('group', { name: 'They owe me' })
+    expect(owed).toHaveTextContent('₹1,000')
+    expect(owed).toHaveTextContent('₹500 overdue')
+    expect(owed).toHaveTextContent('Not due₹500')
+    expect(owed).toHaveTextContent('1–30 days late₹200')
+    expect(owed).toHaveTextContent('61+ days late₹300')
+    expect(owed).not.toHaveTextContent('31–60')
+    expect(within(card).getByRole('group', { name: 'I owe' })).toHaveTextContent('₹400')
+  })
+
+  it('both cards stay out of the way for results without lending data or with nothing open', () => {
+    ui()
+    expect(screen.queryByRole('region', { name: 'Net position' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Money with people' })).toBeNull()
+    m.data = { ...withMoney(), people: { ...withMoney().people!, open_count: 0 } }
+    ui()
+    expect(screen.queryByRole('region', { name: 'Money with people' })).toBeNull()
+  })
 })
+

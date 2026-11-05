@@ -292,7 +292,7 @@ describe('Lent / Borrowed', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(toast()?.message).toBe('Lent ₹10,000 to Ravi Kumar')
     const id = m.createEntry.mock.calls[0]?.[0].id
-    act(() => toast()?.actions[0]?.run())
+    act(() => { toast()?.actions[0]?.run() })
     await waitFor(() => expect(m.deleteEntry).toHaveBeenCalledWith(id))
   })
 

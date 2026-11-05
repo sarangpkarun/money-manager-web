@@ -53,7 +53,7 @@ export default function MoneyScreen() {
             <p className="mb-3">Couldn't load your money.</p>
             <button onClick={() => void q.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-white">Retry</button>
           </div>
-        ) : !q.data ? <div className="space-y-3 px-4" aria-busy="true"><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
+        ) : !q.data ? <div className="space-y-3 px-4" aria-busy="true" aria-label="Loading money"><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
         : <OwedList direction={view === 'owed' ? 'receive' : 'pay'} entries={q.data.entries} today={today} onOpen={open}
                     onAdd={() => openQuickAdd({ kind: view === 'owed' ? 'lent' : 'borrowed' })} />}
     </div>

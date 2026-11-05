@@ -1,5 +1,6 @@
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAccounts } from '@/features/accounts/queries'
 import { useCategories } from '@/features/categories/queries'
 import { useToday, useWeekStart } from '@/features/profile/useToday'
@@ -39,6 +40,7 @@ function useDeleteWithUndo() {
 }
 
 export default function ActivityScreen() {
+  const navigate = useNavigate()
   const today = useToday()
   const weekStart = useWeekStart()
   const month = useUi((s) => s.month)
@@ -174,7 +176,7 @@ export default function ActivityScreen() {
                     </div>
                   ) : (
                     <SwipeRow onSwipeRight={isEditable(it.row) ? () => openQuickAdd({ edit: it.row }) : undefined}
-                              onSwipeLeft={() => void remove(it.row)}>
+                              onSwipeLeft={isEditable(it.row) || !it.row.entry_id ? () => void remove(it.row) : undefined}>
                       <TxnRow row={it.row} onOpen={() => setSelected(it.row)} />
                     </SwipeRow>
                   )}
@@ -190,7 +192,8 @@ export default function ActivityScreen() {
       {selected && (
         <TxnDetail row={selected} onClose={() => setSelected(null)}
                    onEdit={() => { openQuickAdd({ edit: selected }); setSelected(null) }}
-                   onDelete={() => { void remove(selected); setSelected(null) }} />
+                   onDelete={() => { void remove(selected); setSelected(null) }}
+                   onOpenEntry={(id) => { setSelected(null); navigate(`/money/entry/${id}`) }} />
       )}
     </div>
   )

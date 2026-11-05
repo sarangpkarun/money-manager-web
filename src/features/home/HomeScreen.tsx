@@ -10,7 +10,7 @@ import { useToday } from '@/features/profile/useToday'
 import { useUi } from '@/lib/uiStore'
 import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
-import { CardsCard, RecentCard, ThisMonthCard, WhereItWentCard, type Drill } from './cards'
+import { CardsCard, NetPositionCard, PeopleCard, RecentCard, ThisMonthCard, WhereItWentCard, type Drill } from './cards'
 import { applyLayout, type CardId } from './layout'
 import { useDashboard } from './queries'
 import { useHomeFilters } from './useHomeFilters'
@@ -41,7 +41,7 @@ export default function HomeScreen() {
   }
   const seeAll = () => drill({})
 
-  const order = useMemo(() => applyLayout(profile?.dashboard_layout, ['this_month', 'where_it_went', 'cards', 'recent']), [profile?.dashboard_layout])
+  const order = useMemo(() => applyLayout(profile?.dashboard_layout, ['this_month', 'where_it_went', 'net_position', 'people', 'cards', 'recent']), [profile?.dashboard_layout])
   const empty = !!d && d.month.count === 0 && d.recent.length === 0
 
   const render = (id: CardId) => {
@@ -49,6 +49,8 @@ export default function HomeScreen() {
     switch (id) {
       case 'this_month': return <ThisMonthCard key={id} d={d} today={today} onOpen={seeAll} />
       case 'where_it_went': return <WhereItWentCard key={id} d={d} drill={drill} />
+      case 'net_position': return <NetPositionCard key={id} d={d} onOpen={() => navigate('/money')} />
+      case 'people': return <PeopleCard key={id} d={d} onOpen={() => navigate('/money')} />
       case 'cards': return <CardsCard key={id} d={d} drill={drill} />
       case 'recent': return <RecentCard key={id} d={d} onSeeAll={seeAll} />
       default: return null // reserved for later phases

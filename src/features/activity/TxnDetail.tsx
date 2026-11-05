@@ -15,7 +15,8 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Details plus Edit/Delete buttons: the accessible equivalent of the swipe actions. */
-export function TxnDetail({ row, onClose, onEdit, onDelete }: { row: ActivityRow; onClose: () => void; onEdit: () => void; onDelete: () => void }) {
+export function TxnDetail({ row, onClose, onEdit, onDelete, onOpenEntry }: { row: ActivityRow; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenEntry?: (id: string) => void }) {
+  const linked = !isEditable(row) && !!row.entry_id
   const tone = rowTone(row.kind)
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()} title={rowTitle(row)} description={KIND_LABEL[row.kind] ?? row.kind}>
@@ -32,10 +33,17 @@ export function TxnDetail({ row, onClose, onEdit, onDelete }: { row: ActivityRow
         {row.notes && <Line label="Note">{row.notes}</Line>}
         {row.tags && row.tags.length > 0 && <Line label="Tags">{row.tags.map((t) => `#${t}`).join(' ')}</Line>}
       </dl>
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {isEditable(row) && <button className={secondaryBtn} onClick={onEdit}>Edit</button>}
-        <button className={`${secondaryBtn} text-money-red ${isEditable(row) ? '' : 'col-span-2'}`} onClick={onDelete}>Delete</button>
-      </div>
+      {linked ? (
+        <div className="mt-4 space-y-2">
+          <p className="text-sm text-muted">This belongs to a loan. Change or delete it from the loan, so balances stay correct.</p>
+          <button className={secondaryBtn} onClick={() => onOpenEntry?.(row.entry_id as string)}>Open loan</button>
+        </div>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {isEditable(row) && <button className={secondaryBtn} onClick={onEdit}>Edit</button>}
+          <button className={`${secondaryBtn} text-money-red ${isEditable(row) ? '' : 'col-span-2'}`} onClick={onDelete}>Delete</button>
+        </div>
+      )}
     </Sheet>
   )
 }

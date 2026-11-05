@@ -1,4 +1,5 @@
 import type { ActivityRow } from '@/lib/db'
+import type { MoneyStats } from '@/features/money/types'
 
 export interface BreakdownItem {
   id: string | null
@@ -34,6 +35,9 @@ export interface Dashboard {
   by_place: BreakdownItem[]
   recent: ActivityRow[]
   accounts: DashboardAccount[]
+  /** Lending figures; absent in results cached before Phase 4. */
+  people?: MoneyStats
+  net_position?: { assets: number; card_outstanding: number; owed_to_me: number; i_owe: number }
   generated_at: string
 }
 

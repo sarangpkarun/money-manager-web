@@ -13,6 +13,7 @@ import { dayLabel } from '@/features/activity/group'
 import { topN, type BreakdownRow } from './breakdown'
 import type { Dashboard } from './dashboardTypes'
 import { vsLastMonth } from './delta'
+import { ageingBars } from '@/features/money/ageing'
 
 export function Card({ title, action, children, label }: { title: string; action?: ReactNode; children: ReactNode; label?: string }) {
   return (
@@ -178,6 +179,63 @@ export function RecentCard({ d, onSeeAll }: { d: Dashboard; onSeeAll: () => void
     <Card title="Recent activity" action={<button onClick={onSeeAll} className={linkBtn}>See all</button>}>
       <div className="-mx-4 divide-y divide-line">
         {d.recent.map((r) => <TxnRow key={r.id} row={r as unknown as ActivityRow} onOpen={onSeeAll} />)}
+      </div>
+    </Card>
+  )
+}
+
+// ------------------------------------------------------------------ Net position
+export function NetPositionCard({ d, onOpen }: { d: Dashboard; onOpen: () => void }) {
+  const n = d.net_position
+  if (!n) return null
+  const net = n.assets + n.owed_to_me - n.i_owe - n.card_outstanding
+  const rows: [string, number, 'in' | 'out' | 'neutral'][] = [
+    ['In your accounts', n.assets, 'neutral'], ['Owed to you', n.owed_to_me, 'in'], ['You owe people', n.i_owe, 'out'], ['Card bills', n.card_outstanding, 'out'],
+  ]
+  return (
+    <Card title="Net position" action={<button onClick={onOpen} className={linkBtn}>Money</button>}>
+      <Amount paise={net} tone={net < 0 ? 'out' : 'neutral'} className="text-3xl font-bold" />
+      <dl className="mt-3 space-y-1 text-sm">
+        {rows.filter(([, v]) => v !== 0).map(([label, v, tone]) => (
+          <div key={label} className="flex justify-between"><dt className="text-muted">{label}</dt><dd><Amount paise={v} tone={tone} sign={tone !== 'neutral'} /></dd></div>
+        ))}
+      </dl>
+    </Card>
+  )
+}
+
+// ------------------------------------------------------------------ Money with people
+export function PeopleCard({ d, onOpen }: { d: Dashboard; onOpen: () => void }) {
+  const p = d.people
+  if (!p || p.open_count === 0) return null
+  const sides = [
+    { key: 'owed', title: 'They owe me', total: p.owed_to_me, overdue: p.overdue_owed_to_me, ageing: p.ageing_owed_to_me, tone: 'in' as const },
+    { key: 'owe', title: 'I owe', total: p.i_owe, overdue: p.overdue_i_owe, ageing: p.ageing_i_owe, tone: 'out' as const },
+  ].filter((x) => x.total > 0)
+  return (
+    <Card title="Money with people" action={<button onClick={onOpen} className={linkBtn}>Open</button>}>
+      <div className="space-y-4">
+        {sides.map((x) => {
+          const bars = ageingBars(x.ageing)
+          return (
+            <div key={x.key} role="group" aria-label={x.title}>
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-muted">{x.title}</span>
+                <Amount paise={x.total} tone={x.tone} className="text-xl font-semibold" />
+              </div>
+              {x.overdue > 0 && <div className="text-sm text-money-red">{formatMoney(x.overdue)} overdue</div>}
+              <ul className="mt-2 space-y-1">
+                {bars.filter((b) => b.paise > 0).map((b) => (
+                  <li key={b.key}>
+                    <BarRow fraction={b.fraction} color={b.late ? 'var(--red)' : 'var(--accent)'}>
+                      <span className="flex min-h-8 items-center justify-between px-2 text-sm"><span>{b.label}</span><span className="tabular">{formatMoney(b.paise)}</span></span>
+                    </BarRow>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        })}
       </div>
     </Card>
   )
