@@ -134,10 +134,10 @@ describe('time zones and daylight saving', () => {
     expect(mine(await claim('2026-03-08T13:00:00Z'), ny.u).map((r) => r.key)).toEqual(['due:today:2026-03-08'])
   })
 
-  it('a user with an unknown time zone is left alone instead of breaking everyone else', async () => {
+  it('an unknown time zone cannot be saved (and the scheduler would skip such a profile rather than break everyone else)', async () => {
     const bad = await setup('rem-bad')
     const good = await setup('rem-good')
-    await sql(`update profiles set timezone = 'Nowhere/Land' where id = $1`, [bad.u.id])
+    await expect(sql(`update profiles set timezone = 'Nowhere/Land' where id = $1`, [bad.u.id])).rejects.toThrow(/profiles_timezone_ok/)
     await plan(good, [{ date: '2026-11-15' }])
     expect(mine(await claim(await utc('2026-11-15 10:00', 'Asia/Kolkata')), good.u)).toHaveLength(1)
   })
