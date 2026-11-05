@@ -196,8 +196,9 @@ describe('atomicity', () => {
 
   it('a failure in the middle of create_entry leaves nothing behind', async () => {
     const id = uid()
+    // only this entry's row fails: test files run in parallel against one database
     await sql(`create function fail_lend_sched() returns trigger language plpgsql as $$
-      begin raise exception 'forced failure'; end $$`)
+      begin if new.entry_id = '${id}'::uuid then raise exception 'forced failure'; end if; return new; end $$`)
     await sql(`create trigger t_fail before insert on schedule_items for each row execute function fail_lend_sched()`)
     try {
       expect((await lend({ p_id: id })).error?.message).toMatch(/forced failure/)

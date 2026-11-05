@@ -470,3 +470,18 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 - [ ] Earlier open items: Phase 0 viewport gap, push spike, Supabase redirect URLs; Phases 1 to 5 are not pushed to GitHub.
 
 **Known limits:** `remind_at` on notes is unused until Phase 7 (reminders); one e2e test (loan transaction in Activity) failed once in a full run and passed in two re-runs, cause not found; Agenda does not list spending.
+
+## Phase 6 status (updated 2026-11-06): paying for someone else, card tracking
+
+**Built and verified locally:** migration `20260107000001_others.sql` (`quick_add_with_others` adds the purchase and every friend's entry/plan in one transaction; `delete_transaction` (blocked once a friend has paid, with a snapshot for Undo) and `update_expense_for_others`; `create_entry_with_plan` accepts `on_behalf` + a source purchase; payments to on-behalf entries are `debt_in`; `for_other_paise` kept in sync by every mutation; `others=pending` filter; Activity and Calendar rows carry who still owes what; `dashboard_summary` gains `friends`); Quick Add **For someone else** (one or many people, equal split when you add people, partial amounts, optional due date or instalments per friend, "Your share" live, edit mode that locks friends who already paid); Activity shows "₹X pending from Arun" in the row, the detail sheet lists friends with Open entry and "your share", delete blocks with a clear message and offers Undo; the shared filter sheet gets "Paid for others, not returned yet"; entry detail has a **Linked purchase** card and a **Remind me** switch; Money tags these entries "Paid for"; the Cards card shows "₹X to get back from friends", "₹X of this is for friends" per card and the next bill due date.
+
+**Numbers:** 607 unit/component tests, 191 SQL/RLS tests, 23 Playwright e2e tests, coverage 99.7% lines on `src/lib`. Scenario A (₹30,000 on HDFC for Arun: spend ₹0, card outstanding +₹30,000, ₹10,000 by UPI, ₹20,000 cash settles, badge gone, History), the partial case (₹5,000 bill, ₹4,000 for a friend → spend ₹1,000) and a three-way split pass end to end, as do blocked delete → remove payment → delete → Undo and the "not returned yet" filter. Search with friends on 500 of 5,000 purchases: 11 ms plain, 30 ms filtered (budget 300). Initial JS 187.0 KB gz (budget 200).
+
+**Decisions:** the purchase stays editable and uncontrolled by an entry; no debt transaction at purchase time (the expense already moved the money); the badge is text in the row's second line (fixed row height for the virtualised list); no interest on money paid for friends; edits of a friend's amount are for single-row entries (instalment plans are changed from their entry); a sibling RPC was added instead of widening `quick_add_transaction`.
+
+**Not done / needs you:**
+- [ ] `supabase db push` for `20260107000001_others.sql` (after your approval), then try For someone else on the deployed app.
+- [ ] On-device iPhone check of the For someone else form (keypad with several friend rows), the Activity badge and the Cards card.
+- [ ] Earlier open items: Phase 0 viewport gap, push spike, Supabase redirect URLs; Phases 1 to 6 are not pushed to GitHub.
+
+**Known limits:** reminders themselves are Phase 7 (the Remind me switch only stores the choice); income paid for others is not supported; one SQL test used a failure trigger that interfered with other test files running in parallel (fixed by scoping it to its own entry).
