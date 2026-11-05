@@ -425,3 +425,18 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 - [ ] Earlier open items: Phase 0 viewport gap, push spike, Supabase redirect URLs; Phase 1/2/3 commits are not pushed to GitHub.
 
 **Known limits:** Net position, Due soon, People, EMI load and Insights cards arrive with later phases; the layout editor is Phase 7; Home cannot yet edit or delete a recent row (it opens Activity).
+
+## Phase 4 status (updated 2026-11-05)
+
+**Built and verified locally:** migration `20260104000001_money.sql` (`create_entry`, `record_payment` with row lock and overpayment check, `delete_payment`, `mark_unpaid`, `update_entry`, `delete_entry`, `merge_people`, `money_stats`, `money_overview`, `money_history`, view `people_balances`, and `dashboard_summary` extended with `people` and `net_position` in the same single call); Money tab (Owed to me / I owe grouped by person with Pending / Partial / Overdue / Paid chips, People with search, filters, sort, duplicate review and merge, CSV/paste import, History); entry detail overlay (`/money/entry/:id`: progress, payments with Undo, receive/pay sheet that blocks overpayment, edit, mark as unpaid, delete with a plain-language confirm); Quick Add **Lent** and **Borrowed** (person autocomplete with inline create, due date, flat/simple interest with live total); Home **Net position** and **Money with people** (ageing buckets); loan transactions in Activity cannot be deleted directly (they open the loan, so balances stay correct).
+
+**Numbers:** 445 unit/component tests, 110 SQL/RLS tests, 10 Playwright e2e tests, coverage 99.8% lines on `src/lib`. Money overview 37 ms, history 7 ms and dashboard 23 ms with 2,000 entries (budget 150). Initial JS 183.8 KB gz (budget 200); Money, People and the entry screen are lazy chunks. The exit scenario (lend ₹10,000 → part pay ₹4,000 → settle ₹6,000) is an e2e test that also checks the account balance at every step, the overpayment refusal, History, and that loans never count as spending. Atomicity is tested by forcing a failure in the middle of `record_payment` and `create_entry` (nothing persists); two simultaneous payments cannot overpay.
+
+**Decisions:** every entry has one schedule row (single-row plan); no due date = sentinel `9999-12-31`, never overdue; interest is fixed at creation (None / Flat / Simple up to the due date); `mark_unpaid` removes all payments and their transactions; deleting an entry removes everything it created and has no Undo (confirm sheet explains); net position counts card bills once.
+
+**Not done / needs you:**
+- [ ] `supabase db push` for `20260104000001_money.sql` (after your approval), then try lending on the deployed app.
+- [ ] On-device iPhone check of Quick Add Lent/Borrowed (person suggestions with the keypad up), the Money tab and the entry screen.
+- [ ] Earlier open items: Phase 0 viewport gap, push spike, Supabase redirect URLs; Phase 1 to 4 commits are not pushed to GitHub.
+
+**Known limits:** no Person or Status filter in Activity yet; no offline write queue; open-ended simple interest, multi-row schedules, EMIs and On-behalf arrive in Phases 5 and 6; reminders are Phase 7.
