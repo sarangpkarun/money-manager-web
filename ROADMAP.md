@@ -393,3 +393,20 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 **Done:** `src/lib` money/dates/interest/EMI/schedule/allocate/labels/respread/prepay with rules documented in `src/lib/README.md`. 207 tests (incl. property tests and scenarios B, C, D), coverage 99.6% statements / 98.5% branches (gate: 95/90), golden fixture `tests/fixtures/schedule-cases.json` (14 cases) ready for Phase 5 SQL parity. Textbook check: ₹1,00,000 at 12% over 12 months gives EMI ₹8,884.88.
 
 **Decisions recorded:** flat = one-time % of principal; simple (plan) = months/12 or weeks/52; skip shifts the row and later unpaid rows; change amount re-spreads over later unpaid rows; extra payment shrinks from the last row; principal and interest split independently so no row can go negative.
+
+---
+
+## Phase 2 status (updated 2026-11-05)
+
+**Built and verified locally:** migration `20260102000001_activity.sql` (Cash account seeded on signup, `account_balances` view, `filter_transactions`/`search_transactions` with keyset pagination, `activity_summary`, `title_suggestions`, idempotent `quick_add_transaction`); Settings for accounts and categories; Quick Add (spent / received / transfer, amount expressions, suggestions, ranked categories, Undo and Add another, edit mode); Activity (virtualised list with sticky day headers, month totals, per-account chips, search, swipe edit/delete with Undo, detail sheet, filter sheet with URL state).
+
+**Numbers:** 355 unit/component tests, 75 SQL/RLS tests, 5 Playwright e2e tests, coverage 99% (src/lib). With 5,000 rows: search 10 to 42 ms server-side (budget 300), summary 8 ms (budget 150), only a window of rows in the DOM. Initial JS 150.8 KB gz (budget 200). Scenario E passes in 3 taps in a real (mobile-emulated) browser.
+
+**Bugs found by tests and fixed:** swipe wrapper swallowed taps on rows (`filterTaps`); stale persisted account list hid a just-created account after a reload; `-0` days in labels (Phase 1).
+
+**Not done / needs you:**
+- [ ] Push migration `20260102000001` to the Supabase cloud project (`supabase db push`), then try Quick Add on the deployed app.
+- [ ] On-device iPhone checks: sheet opens fast with the keypad up, no input zoom, smooth scroll, swipe feels right, safe areas.
+- [ ] Phase 0 leftovers still open: installed-app viewport gap, push spike, Supabase redirect URLs.
+
+**Known limits:** entry-based types (lent, on behalf, borrowed, EMI) and Person/Status filters arrive with Phases 4 to 6; there is no offline write queue yet (v1.1); Playwright runs on Chromium emulation, not real iOS Safari.

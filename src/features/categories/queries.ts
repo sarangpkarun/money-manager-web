@@ -7,7 +7,7 @@ import { reorderUpdates } from '@/features/settings/reorder'
 export function useCategories() {
   return useQuery({
     queryKey: qk.categories,
-    staleTime: 5 * 60_000,
+    staleTime: 0, // same reasoning as accounts: cheap list, always revalidated on open
     queryFn: async (): Promise<Category[]> => {
       const { data, error } = await supabase.from('categories').select('*').order('sort').order('name')
       if (error) throw error

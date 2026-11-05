@@ -7,6 +7,8 @@ import { reorderUpdates } from '@/features/settings/reorder'
 export function useAccounts() {
   return useQuery({
     queryKey: qk.accounts,
+    // always revalidate on open: the persisted cache paints instantly, then silently refreshes (a new account must never be missing)
+    staleTime: 0,
     queryFn: async (): Promise<Account[]> => {
       const { data, error } = await supabase.from('accounts').select('*').order('sort').order('name')
       if (error) throw error
@@ -18,6 +20,7 @@ export function useAccounts() {
 export function useAccountBalances() {
   return useQuery({
     queryKey: qk.balances,
+    staleTime: 0,
     queryFn: async (): Promise<AccountBalance[]> => {
       const { data, error } = await supabase.from('account_balances').select('*').order('sort').order('name')
       if (error) throw error

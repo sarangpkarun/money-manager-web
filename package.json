@@ -17,7 +17,9 @@
     "types": "supabase gen types typescript --local > src/lib/database.types.ts",
     "push:test": "node scripts/push-test.mjs",
     "dev:cloud": "vite --mode cloud",
-    "test:cov": "vitest run --coverage"
+    "test:cov": "vitest run --coverage",
+    "e2e": "playwright test",
+    "seed:perf": "node scripts/seed-transactions.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.2",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

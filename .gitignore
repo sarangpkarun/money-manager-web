@@ -9,3 +9,5 @@ supabase/.temp
 supabase/.branches
 *.local
 coverage
+test-results
+playwright-report
