@@ -8,7 +8,7 @@ import { buildSchedule, type PlanInput, type ScheduleRow } from '../../src/lib/s
 import { ANON, deleteUser, makeUser, sql, type TestUser } from './helpers'
 
 let a: TestUser, b: TestUser
-let cash: string, bank: string, shopping: string, ravi: string
+let bank: string, shopping: string, ravi: string
 
 async function must<T>(p: PromiseLike<{ data: T; error: { message: string } | null }>) {
   const { data, error } = await p
@@ -50,7 +50,6 @@ const remove = (id: string) => rpc(a, 'delete_entry', { p_id: id })
 beforeAll(async () => {
   a = await makeUser('plan-a')
   b = await makeUser('plan-b')
-  cash = (await must(a.client.from('accounts').select('id').eq('name', 'Cash').single()))!.id
   bank = (await must(a.client.from('accounts').insert({ name: 'Bank', type: 'bank', opening_balance_paise: 10_000_000 }).select('id').single()))!.id
   shopping = (await must(a.client.from('categories').select('id').eq('name', 'Shopping').single()))!.id
   ravi = (await must(a.client.from('people').insert({ name: 'Ravi' }).select('id').single()))!.id
@@ -81,7 +80,6 @@ describe('golden schedules: the server accepts and round-trips exactly what the 
 
 describe('create_entry_with_plan validation', () => {
   const ok = () => monthly(5_000_000, 10, '2026-12-05')
-  const S = '2026-12-01'
   it('rejects bad payloads and changes nothing', async () => {
     const rows = ok()
     const bad: [string, unknown, PlanOpts, RegExp][] = [
