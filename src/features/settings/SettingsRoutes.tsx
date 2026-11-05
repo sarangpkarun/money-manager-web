@@ -8,6 +8,10 @@ const CategoriesScreen = lazy(() => import('./CategoriesScreen'))
 const RemindersScreen = lazy(() => import('./RemindersScreen'))
 const ProfileScreen = lazy(() => import('./ProfileScreen'))
 const DisplayScreen = lazy(() => import('./DisplayScreen'))
+const ExportScreen = lazy(() => import('./ExportScreen'))
+const PrivacyScreen = lazy(() => import('./PrivacyScreen'))
+const AboutScreen = lazy(() => import('./AboutScreen'))
+const DeleteAccountScreen = lazy(() => import('./DeleteAccountScreen'))
 
 const Row = ({ to, label, hint }: { to: string; label: string; hint?: string }) => (
   <Link to={to} className="flex min-h-14 items-center justify-between gap-3 px-4">
@@ -68,6 +72,10 @@ export default function SettingsRoutes() {
           <Route path="/settings/reminders" element={<RemindersScreen />} />
           <Route path="/settings/profile" element={<ProfileScreen />} />
           <Route path="/settings/display" element={<DisplayScreen />} />
+          <Route path="/settings/export" element={<ExportScreen />} />
+          <Route path="/settings/privacy" element={<PrivacyScreen />} />
+          <Route path="/settings/about" element={<AboutScreen />} />
+          <Route path="/settings/delete" element={<DeleteAccountScreen />} />
           <Route path="*" element={<Navigate to="/settings" replace />} />
         </Routes>
       </Suspense>
