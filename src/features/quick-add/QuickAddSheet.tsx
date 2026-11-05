@@ -6,7 +6,7 @@ import { normaliseName, matchPeople } from '@/features/money/people'
 import { useAddExpenseForOthers, useDeleteTransactionWithOthers, useUpdateExpenseForOthers } from '@/features/activity/othersQueries'
 import { PlanFields } from '@/features/money/plan/PlanFields'
 import { emptyPlanForm, formToSpec, previewFor, type PlanFormState } from '@/features/money/plan/planForm'
-import { useCreateEntry, useCreatePlan, useDeleteEntry, usePeople, useSavePerson } from '@/features/money/queries'
+import { useCreateEntry, useCreatePlan, useDeleteEntry, useDisableReminders, usePeople, useSavePerson } from '@/features/money/queries'
 import { planRpcFields, rowsPayload } from '@/lib/plan'
 import { useToday } from '@/features/profile/useToday'
 import type { ActivityRow } from '@/lib/db'
@@ -57,6 +57,7 @@ function QuickAddForm() {
   const del = useDeleteTransaction()
   const createEntry = useCreateEntry()
   const createPlan = useCreatePlan()
+  const disableReminders = useDisableReminders()
   const setEmiOpen = useUi((s) => s.setEmiOpen)
   const deleteEntry = useDeleteEntry()
   const savePerson = useSavePerson()
@@ -78,6 +79,8 @@ function QuickAddForm() {
   const [others, setOthers] = useState<OtherRow[] | null>(() =>
     editing?.others?.length ? editing.others.map((o) => newOtherRow(o.entry_id, o.person_name ?? '', o.person_id, String(o.amount_paise / 100), o.entry_id)) : null)
   const [otherErrors, setOtherErrors] = useState<Record<string, string>>({})
+  // reminders for money lent, borrowed or paid for someone (entries.remind); on by default
+  const [remind, setRemind] = useState(true)
   const paidByKey = useMemo(
     () => Object.fromEntries((editing?.others ?? []).filter((o) => o.amount_paise - o.pending_paise > 0).map((o) => [o.entry_id, o.amount_paise - o.pending_paise])),
     [editing],
@@ -144,6 +147,7 @@ function QuickAddForm() {
             id, kind: i.kind, person_id: personId, title: i.title, amount_paise: i.amount_paise, account_id: i.account_id, start_date: i.start_date,
             due_date: i.due_date, interest: i.interest, rate_bps: i.rate_bps, notes: i.notes,
           })
+      if (!remind) void saved.then(() => disableReminders.mutateAsync([id])).catch(() => undefined)
       setQuickAddOpen(false)
       toast().show({
         message: `${i.kind === 'lent' ? 'Lent' : 'Borrowed'} ${formatMoney(i.amount_paise)} ${i.kind === 'lent' ? 'to' : 'from'} ${i.personName}${pv && pv.ok ? ` in ${pv.preview.count} instalments` : ''}`,
@@ -185,6 +189,7 @@ function QuickAddForm() {
       const id = crypto.randomUUID()
       const saved = addForOthers.mutateAsync({ id, amount_paise: input.amount_paise, date: input.date, account_id: input.account_id, category_id: input.category_id, title: input.title,
         place: input.place, notes: input.notes, tags: input.tags, others: othersPayload(v.items, ids) })
+      if (!remind) void saved.then((r) => disableReminders.mutateAsync(r.entries)).catch(() => undefined)
       setQuickAddOpen(false)
       toast().show({
         message: `Added ${label}`,
@@ -350,6 +355,10 @@ function QuickAddForm() {
         {!lending && !more.tags && <Chip onClick={() => setMore((m) => ({ ...m, tags: true }))}>+ Tags</Chip>}
       </div>
       {errors.due && <p role="alert" className="text-sm text-money-red">{errors.due}</p>}
+
+      {!editing && (lending || others !== null) && (
+        <div><Chip selected={remind} onClick={() => setRemind(!remind)}>{remind ? '🔔 Reminders on' : '🔕 Reminders off'}</Chip></div>
+      )}
 
       {form.kind === 'expense' && others !== null && (
         <OthersFields rows={others} onChange={setOthers} bill={amount.paise} people={people} today={today} errors={otherErrors} blocked={Object.keys(paidByKey).length ? paidByKey : undefined} />

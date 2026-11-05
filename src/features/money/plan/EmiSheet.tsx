@@ -10,7 +10,7 @@ import { Chip } from '@/ui/Chip'
 import { Field, inputCls, primaryBtn } from '@/ui/Field'
 import { Sheet } from '@/ui/Sheet'
 import { useToasts } from '@/ui/toastStore'
-import { useCreatePlan, useDeleteEntry } from '../queries'
+import { useCreatePlan, useDeleteEntry, useDisableReminders } from '../queries'
 import { PlanFields } from './PlanFields'
 import { emptyPlanForm, formToSpec, previewFor, type PlanFormState } from './planForm'
 
@@ -23,6 +23,8 @@ export default function EmiSheet({ open, onClose }: { open: boolean; onClose: ()
   const categories = (useCategories().data ?? []).filter((c) => c.kind === 'expense' && !c.archived)
   const create = useCreatePlan()
   const del = useDeleteEntry()
+  const disableReminders = useDisableReminders()
+  const [remind, setRemind] = useState(true)
   const [kind, setKind] = useState<'emi_purchase' | 'instalment'>('emi_purchase')
   const [store, setStore] = useState('')
   const [product, setProduct] = useState('')
@@ -57,6 +59,7 @@ export default function EmiSheet({ open, onClose }: { open: boolean; onClose: ()
         id, kind, person_id: null, party: store.trim(), title: product.trim(), principal_paise: financed, down_paise: downP ?? 0, account_id: account,
         category_id: categoryId, start_date: today, interest: fields.interest, rate_bps: fields.rateBps, no_cost: fields.noCost, rows: rowsPayload(pv.preview.rows),
       })
+      if (!remind) await disableReminders.mutateAsync([id]).catch(() => undefined)
       useToasts.getState().show({
         message: `${product.trim()}: ${pv.preview.count} × ${formatMoney(pv.preview.monthly)}`,
         actions: [{ label: 'Undo', run: () => void del.mutateAsync(id).catch(() => undefined) }],
@@ -97,6 +100,7 @@ export default function EmiSheet({ open, onClose }: { open: boolean; onClose: ()
           </div>
           {errors.account && <p role="alert" className="text-sm text-money-red">{errors.account}</p>}
         </div>
+        <div><Chip selected={remind} onClick={() => setRemind(!remind)}>{remind ? '🔔 Reminders on' : '🔕 Reminders off'}</Chip></div>
         <button className={primaryBtn} disabled={create.isPending} onClick={() => void submit()}>Save</button>
       </div>
     </Sheet>

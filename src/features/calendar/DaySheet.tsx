@@ -8,6 +8,7 @@ import { Sheet } from '@/ui/Sheet'
 import { TxnRow } from '@/features/activity/TxnRow'
 import { TONE_CLS } from '@/features/money/status'
 import { shortDate, longDate } from './dateText'
+import { useProfile } from '@/features/profile/useProfile'
 import { useTickTask, useUndoTick } from './queries'
 import type { CalendarItem, CalendarMonth, CalendarNote } from './types'
 
@@ -30,6 +31,7 @@ export function DaySheet({ date, data, today, onClose, onPay, onOpenEntry, onOpe
   onEditNote: (n: CalendarNote) => void
 }) {
   const tick = useTickTask()
+  const timezone = useProfile().data?.timezone
   const undoTick = useUndoTick()
 
   const due = data.items.filter((i) => !isPaid(i) && i.due_date === date)
@@ -41,7 +43,7 @@ export function DaySheet({ date, data, today, onClose, onPay, onOpenEntry, onOpe
 
   const onTick = async (n: CalendarNote) => {
     try {
-      const r = await tick.mutateAsync({ id: n.id, date: n.date, repeat_rule: n.repeat_rule, done: n.done })
+      const r = await tick.mutateAsync({ id: n.id, date: n.date, repeat_rule: n.repeat_rule, done: n.done, remind_at: n.remind_at ?? null, ...(timezone ? { timezone } : {}) })
       showUndo(r.movedTo ? `"${n.title}" done · next ${shortDate(r.movedTo)}` : n.done ? `"${n.title}" reopened` : `"${n.title}" done`, () => undoTick.mutate(r.undo))
     } catch (e) {
       useToasts.getState().show({ message: `Couldn't update: ${(e as Error).message}` })

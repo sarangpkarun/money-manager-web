@@ -10,6 +10,8 @@ export interface CalendarItem extends CalItem {
 export interface CalendarNote extends CalNote {
   body: string | null
   entry_id: string | null
+  /** instant the note should ring (ISO), if any */
+  remind_at?: string | null
 }
 
 export interface CalendarDay { date: string; spent: number; received: number; txn_count: number }

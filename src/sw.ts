@@ -24,11 +24,13 @@ sw.addEventListener('install', () => void sw.skipWaiting())
 sw.addEventListener('activate', () => void sw.clients.claim())
 
 sw.addEventListener('push', ((e: PushEv) => {
-  let p: { title?: string; body?: string; url?: string } = {}
+  let p: { title?: string; body?: string; url?: string; tag?: string } = {}
   try { p = (e.data?.json() as typeof p) ?? {} } catch { p = { body: e.data?.text() } }
   e.waitUntil(
     sw.registration.showNotification(p.title ?? 'Money Manager', {
       body: p.body ?? '', icon: '/icon-192.png', badge: '/icon-192.png', data: { url: p.url ?? '/' },
+      // one notification per reminder: a re-delivery replaces it instead of stacking
+      ...(p.tag ? { tag: p.tag } : {}),
     }),
   )
 }) as (e: never) => void)

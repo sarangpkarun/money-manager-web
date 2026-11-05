@@ -1,5 +1,5 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAccounts } from '@/features/accounts/queries'
 import { FilterSheet } from '@/features/activity/FilterSheet'
 import { activeFilterCount } from '@/features/activity/filters'
@@ -7,6 +7,7 @@ import { monthLabel, shiftMonth } from '@/features/activity/group'
 import { useCategories } from '@/features/categories/queries'
 import { useToday, useWeekStart } from '@/features/profile/useToday'
 import { monthGrid, weekdayLabels } from '@/lib/calendarGrid'
+import { isValidDate } from '@/lib/dates'
 import { formatCompact, formatMoney } from '@/lib/money'
 import { ALL_LAYERS, markerSummary, markersByDay, visibleMarkers, type Layers, type Marker } from '@/lib/markers'
 import { useUi } from '@/lib/uiStore'
@@ -55,6 +56,7 @@ export default function CalendarScreen() {
   const today = useToday()
   const weekStart = useWeekStart()
   const navigate = useNavigate()
+  const { search } = useLocation()
   const month = useUi((s) => s.month)
   const setMonth = useUi((s) => s.setMonth)
   const openQuickAdd = useUi((s) => s.openQuickAdd)
@@ -70,6 +72,23 @@ export default function CalendarScreen() {
   const accounts = useAccounts().data ?? []
   const categories = useCategories().data ?? []
   const filterCount = activeFilterCount(filters)
+
+  // a notification (or any link) can open a day: /calendar?day=yyyy-MM-dd. It is consumed so a refresh or Back does not reopen it.
+  // Local state is adjusted while rendering (React's pattern for state derived from props); the shared month and the URL are updated in an effect.
+  const dayParam = new URLSearchParams(search).get('day')
+  const validDay = dayParam && isValidDate(dayParam) ? dayParam : null
+  const [consumedDay, setConsumedDay] = useState<string | null>(null)
+  if (dayParam && dayParam !== consumedDay) {
+    setConsumedDay(dayParam)
+    if (validDay) { setViewState('month'); setSelected(validDay) }
+  } else if (!dayParam && consumedDay !== null) setConsumedDay(null)
+  useEffect(() => {
+    if (!dayParam) return
+    const rest = new URLSearchParams(search)
+    rest.delete('day')
+    if (validDay) setMonth(validDay.slice(0, 7))
+    navigate({ pathname: '/calendar', search: rest.toString() }, { replace: true })
+  }, [dayParam, validDay, search, navigate, setMonth])
 
   const setView = (v: 'month' | 'agenda') => { setViewState(v); remember(VIEW_KEY, v) }
   const toggle = (k: keyof Layers) => setLayers((l) => { const next = { ...l, [k]: !l[k] }; remember(LAYERS_KEY, JSON.stringify(next)); return next })

@@ -186,6 +186,20 @@ export function useDeletePayment() {
   })
 }
 
+/** Turns reminders off for entries that were just created (the create calls do not take the flag). */
+export function useDisableReminders() {
+  const refresh = useRefreshMoney()
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const { error } = await supabase.rpc('update_entry', { p_id: id, p_patch: { remind: false } as Json })
+        if (error) throw error
+      }
+    },
+    onSettled: refresh,
+  })
+}
+
 export function useMarkUnpaid() {
   const refresh = useRefreshMoney()
   return useMutation({

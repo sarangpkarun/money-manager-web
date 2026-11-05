@@ -24,6 +24,7 @@ vi.mock('@/features/money/queries', () => ({ useRecordPayment: () => ({ mutateAs
 vi.mock('@/features/accounts/queries', () => ({ useAccounts: () => ({ data: [{ id: 'cash', name: 'Cash', archived: false }] }) }))
 vi.mock('@/features/categories/queries', () => ({ useCategories: () => ({ data: [] }) }))
 vi.mock('@/features/profile/useToday', () => ({ useToday: () => '2026-11-15', useWeekStart: () => 1 }))
+vi.mock('@/features/profile/useProfile', () => ({ useProfile: () => ({ data: { timezone: 'Asia/Kolkata' } }) }))
 
 import CalendarScreen from './CalendarScreen'
 
@@ -254,7 +255,7 @@ describe('Notes and tasks', () => {
     await user.type(within(dlg).getByLabelText('Title'), 'Pay rent')
     await user.click(within(dlg).getByRole('button', { name: 'Weekly' }))
     await user.click(within(dlg).getByRole('button', { name: 'Save' }))
-    expect(m.save).toHaveBeenCalledWith({ id: undefined, values: { kind: 'task', title: 'Pay rent', body: null, date: '2026-11-20', repeat_rule: 'weekly' } })
+    expect(m.save).toHaveBeenCalledWith({ id: undefined, values: { kind: 'task', title: 'Pay rent', body: null, date: '2026-11-20', repeat_rule: 'weekly', remind_at: null } })
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add note or task' })).toBeNull())
     expect(await screen.findByRole('dialog', { name: 'Friday, 20 Nov 2026' })).toBeInTheDocument()
   })
@@ -284,7 +285,7 @@ describe('Notes and tasks', () => {
     ui()
     await user.click(cell(/^9 Nov/))
     await user.click(await screen.findByRole('checkbox', { name: 'Mark done: Water plants' }))
-    expect(m.tick).toHaveBeenCalledWith({ id: 'w', date: '2026-11-02', repeat_rule: 'weekly', done: false })
+    expect(m.tick).toHaveBeenCalledWith({ id: 'w', date: '2026-11-02', repeat_rule: 'weekly', done: false, remind_at: null, timezone: 'Asia/Kolkata' })
     await waitFor(() => expect(useToasts.getState().toasts[0]?.message).toBe('"Water plants" done · next 9 Nov'))
     act(() => { useToasts.getState().toasts[0]?.actions[0]?.run() })
     expect(m.undo).toHaveBeenCalledWith({ id: 'w', patch: { date: '2026-11-02' } })
@@ -314,6 +315,33 @@ describe('Notes and tasks', () => {
     await user.type(within(dlg).getByLabelText('Title'), 'X')
     await user.click(within(dlg).getByRole('button', { name: 'Save' }))
     expect(await within(dlg).findByText('permission denied')).toBeInTheDocument()
+  })
+})
+
+describe('note reminders', () => {
+  it('a reminder time is saved as the instant it means in the user\'s time zone', async () => {
+    const user = userEvent.setup()
+    ui()
+    await user.click(cell(/^20 Nov/))
+    await user.click(await screen.findByRole('button', { name: 'Add note / task' }))
+    const dlg = await screen.findByRole('dialog', { name: 'Add note or task' })
+    await user.type(within(dlg).getByLabelText('Title'), 'Call bank')
+    fireEvent.change(within(dlg).getByLabelText('Remind me at (optional)'), { target: { value: '08:30' } })
+    await user.click(within(dlg).getByRole('button', { name: 'Save' }))
+    expect(m.save.mock.calls[0]?.[0].values).toMatchObject({ date: '2026-11-20', remind_at: '2026-11-20T03:00:00.000Z' }) // 08:30 in Kolkata
+  })
+  it('editing shows the existing reminder in local time, and clearing it saves null', async () => {
+    const user = userEvent.setup()
+    m.cal = month({ notes: [note({ remind_at: '2026-11-12T03:30:00.000Z' })] })
+    ui()
+    await user.click(cell(/^12 Nov/))
+    await user.click(await screen.findByRole('button', { name: 'Call bank, edit' }))
+    const dlg = await screen.findByRole('dialog', { name: 'Edit' })
+    const time = within(dlg).getByLabelText('Remind me at (optional)')
+    expect(time).toHaveValue('09:00')
+    fireEvent.change(time, { target: { value: '' } })
+    await user.click(within(dlg).getByRole('button', { name: 'Save' }))
+    expect(m.save.mock.calls[0]?.[0].values.remind_at).toBeNull()
   })
 })
 
@@ -362,3 +390,30 @@ describe('Agenda', () => {
     expect(m.save.mock.calls[0]?.[0]).toMatchObject({ id: 'n1', values: { kind: 'note', title: 'Dentist 5pm' } })
   })
 })
+
+describe('deep link: /calendar?day=', () => {
+  const at = (path: string) => render(<MemoryRouter initialEntries={[path]}><Where /><CalendarScreen /></MemoryRouter>)
+
+  it('opens that day\'s sheet and removes the parameter', async () => {
+    at('/calendar?day=2026-11-20')
+    expect(await screen.findByRole('dialog', { name: 'Friday, 20 Nov 2026' })).toBeInTheDocument()
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/calendar$/)
+  })
+  it('switches to the month of a day in another month', async () => {
+    at('/calendar?day=2026-12-05')
+    await waitFor(() => expect(useUi.getState().month).toBe('2026-12'))
+    expect(m.args[m.args.length - 1]?.[0]).toBe('2026-12')
+  })
+  it('keeps filters in the URL and ignores an invalid day', async () => {
+    at('/calendar?day=2026-02-31&acc=11111111-1111-4111-8111-111111111111')
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/calendar?acc=11111111-1111-4111-8111-111111111111'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('leaves the Agenda view for the month view', async () => {
+    localStorage.setItem('mm-cal-view', 'agenda')
+    at('/calendar?day=2026-11-20')
+    expect(await screen.findByRole('dialog', { name: 'Friday, 20 Nov 2026' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Month', hidden: true })).toHaveAttribute('aria-selected', 'true')
+  })
+})
+

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { disablePush } from '@/lib/push'
 import { supabase } from '@/lib/supabase'
 import { clearCache } from '@/app/queryClient'
 
@@ -48,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: deriveStatus(session, loaded, recovery),
       session,
       signOut: async () => {
+        // this device stops receiving this user's reminders (best effort; never blocks signing out)
+        await disablePush(async (endpoint) => { await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint) })
         await supabase.auth.signOut()
       },
       finishRecovery: () => setRecovery(false),

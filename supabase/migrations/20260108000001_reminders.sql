@@ -193,6 +193,17 @@ exception when others then
   raise notice 'pg_cron / pg_net are not available here (%): reminders will not be scheduled', sqlerrm;
 end $$;
 
+-- the calendar's notes carry their reminder time (so editing and ticking a task can keep it)
+create or replace function public._calendar_notes(p_from date, p_to date) returns jsonb
+language sql stable security invoker set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', n.id, 'kind', n.kind, 'title', n.title, 'body', n.body, 'date', n.date,
+    'remind_at', n.remind_at, 'repeat_rule', n.repeat_rule, 'done', coalesce(n.done, false), 'entry_id', n.entry_id)
+    order by n.date, n.title, n.id), '[]'::jsonb)
+  from public.notes n
+  where (n.repeat_rule is null and n.date between p_from and p_to) or (n.repeat_rule is not null and n.date <= p_to)
+$$;
+
 -- ---------------------------------------------------------------- who may call what
 -- claim_due_reminders runs as the service role, which needs to reach the two text/time helpers in the private schema
 grant usage on schema private to service_role;

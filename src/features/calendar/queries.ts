@@ -4,6 +4,7 @@ import type { Json } from '@/lib/database.types'
 import type { InsertRow, Row } from '@/lib/db'
 import { qk } from '@/lib/queryKeys'
 import { nextOccurrence } from '@/lib/repeat'
+import { instantToHm, localToInstant } from '@/lib/zoned'
 import { supabase } from '@/lib/supabase'
 import { parseAgendaWindow, parseCalendarMonth, type AgendaWindow, type CalendarMonth } from './types'
 
@@ -49,6 +50,8 @@ export interface NoteValues {
   body: string | null
   date: string
   repeat_rule: string | null
+  /** instant to remind at (ISO), or null */
+  remind_at: string | null
 }
 
 function useRefreshCalendar() {
@@ -97,7 +100,7 @@ export function useRestoreNote() {
 
 export interface TickResult {
   /** what to put back to undo the tick */
-  undo: { id: string; patch: { done?: boolean; date?: string } }
+  undo: { id: string; patch: { done?: boolean; date?: string; remind_at?: string | null } }
   /** for repeating tasks: the date it moved to */
   movedTo: string | null
 }
@@ -109,12 +112,14 @@ export interface TickResult {
 export function useTickTask() {
   const refresh = useRefreshCalendar()
   return useMutation({
-    mutationFn: async (n: { id: string; date: string; repeat_rule: string | null; done: boolean }): Promise<TickResult> => {
+    mutationFn: async (n: { id: string; date: string; repeat_rule: string | null; done: boolean; remind_at?: string | null; timezone?: string }): Promise<TickResult> => {
       const next = n.repeat_rule ? nextOccurrence(n.date, n.repeat_rule) : null
-      const patch = next ? { date: next } : { done: !n.done }
+      // a repeating task keeps its reminder time of day on its new date
+      const nextRemind = next && n.remind_at && n.timezone ? localToInstant(next, instantToHm(n.remind_at, n.timezone), n.timezone) : null
+      const patch = next ? { date: next, ...(nextRemind ? { remind_at: nextRemind } : {}) } : { done: !n.done }
       const { error } = await supabase.from('notes').update(patch).eq('id', n.id)
       if (error) throw error
-      return { undo: { id: n.id, patch: next ? { date: n.date } : { done: n.done } }, movedTo: next }
+      return { undo: { id: n.id, patch: next ? { date: n.date, ...(nextRemind ? { remind_at: n.remind_at } : {}) } : { done: n.done } }, movedTo: next }
     },
     onSettled: refresh,
   })

@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useToasts } from '@/ui/toastStore'
 
-const m = vi.hoisted(() => ({ create: vi.fn(), del: vi.fn() }))
-vi.mock('../queries', () => ({ useCreatePlan: () => ({ mutateAsync: m.create, isPending: false }), useDeleteEntry: () => ({ mutateAsync: m.del }) }))
+const m = vi.hoisted(() => ({ create: vi.fn(), del: vi.fn(), disable: vi.fn() }))
+vi.mock('../queries', () => ({ useCreatePlan: () => ({ mutateAsync: m.create, isPending: false }), useDeleteEntry: () => ({ mutateAsync: m.del }), useDisableReminders: () => ({ mutateAsync: m.disable }) }))
 vi.mock('@/features/accounts/queries', () => ({ useAccounts: () => ({ data: [{ id: 'bank', name: 'Bank', archived: false }, { id: 'cash', name: 'Cash', archived: false }] }) }))
 vi.mock('@/features/categories/queries', () => ({ useCategories: () => ({ data: [{ id: 'shop', name: 'Shopping', kind: 'expense', icon: null, archived: false }, { id: 'sal', name: 'Salary', kind: 'income', icon: null, archived: false }] }) }))
 vi.mock('@/features/profile/useToday', () => ({ useToday: () => '2026-12-01' }))
@@ -17,7 +17,7 @@ beforeAll(() => {
   Element.prototype.setPointerCapture = Element.prototype.setPointerCapture || (() => {})
   Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture || (() => {})
 })
-beforeEach(() => { vi.clearAllMocks(); m.create.mockResolvedValue({}); m.del.mockResolvedValue({}); useToasts.setState({ toasts: [] }) })
+beforeEach(() => { vi.clearAllMocks(); m.create.mockResolvedValue({}); m.del.mockResolvedValue({}); m.disable.mockResolvedValue(undefined); useToasts.setState({ toasts: [] }) })
 
 const open = async () => {
   const onClose = vi.fn()
@@ -112,5 +112,18 @@ describe('EMI / instalments sheet', () => {
     expect(p).toMatchObject({ kind: 'instalment', party: 'Home Centre', down_paise: 0, interest: 'none' })
     expect(p.rows.map((r: { due_date: string }) => r.due_date)).toEqual(['2026-12-20', '2027-02-01'])
     expect(within(dialog).queryByRole('button', { name: 'Simple %' })).toBeNull() // custom dates: no simple interest
+  })
+
+  it('Reminders can be switched off for the new EMI', async () => {
+    const { user, dialog } = await open()
+    await user.type(within(dialog).getByLabelText('What did you buy?'), 'TV')
+    await user.type(within(dialog).getByLabelText('Store or lender'), 'Shop')
+    await user.type(within(dialog).getByLabelText('Price (₹)'), '9000')
+    await user.click(within(dialog).getByRole('button', { name: 'Equal split' }))
+    await user.type(within(dialog).getByLabelText('Number of months'), '3')
+    fireEvent.change(within(dialog).getByLabelText('First instalment'), { target: { value: '2026-12-10' } })
+    await user.click(within(dialog).getByRole('button', { name: '🔔 Reminders on' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(m.disable).toHaveBeenCalledWith([m.create.mock.calls[0]?.[0].id]))
   })
 })

@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useProfile } from '@/features/profile/useProfile'
 import { isValidDate } from '@/lib/dates'
+import { instantToHm, localToInstant } from '@/lib/zoned'
 import { formatRepeat, parseRepeat, type RepeatUnit } from '@/lib/repeat'
 import { Chip } from '@/ui/Chip'
 import { Field, inputCls, primaryBtn, secondaryBtn } from '@/ui/Field'
@@ -35,6 +37,7 @@ export function NoteSheet({ note, date, onClose }: { note: CalendarNote | null; 
   const save = useSaveNote()
   const del = useDeleteNote()
   const restore = useRestoreNote()
+  const tz = useProfile().data?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
   const init = choiceFor(note?.repeat_rule ?? null)
   const [kind, setKind] = useState<'note' | 'task'>(note?.kind ?? 'task')
   const [title, setTitle] = useState(note?.title ?? '')
@@ -43,6 +46,7 @@ export function NoteSheet({ note, date, onClose }: { note: CalendarNote | null; 
   const [choice, setChoice] = useState<Choice>(init.choice)
   const [n, setN] = useState(init.n)
   const [unit, setUnit] = useState<RepeatUnit>(init.unit)
+  const [remindAt, setRemindAt] = useState(note?.remind_at ? instantToHm(note.remind_at, tz) : '')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const submit = async () => {
@@ -52,10 +56,11 @@ export function NoteSheet({ note, date, onClose }: { note: CalendarNote | null; 
     if (!when || !isValidDate(when)) e.date = 'Choose a date'
     const rep = repeatFromForm(choice, n, unit)
     if (rep.error) e.repeat = rep.error
+    if (remindAt && !/^([01]\d|2[0-3]):[0-5]\d$/.test(remindAt)) e.remind = 'Choose a time'
     if (Object.keys(e).length) return setErrors(e)
     setErrors({})
     try {
-      await save.mutateAsync({ id: note?.id, values: { kind, title: title.trim(), body: body.trim() || null, date: when, repeat_rule: rep.rule } })
+      await save.mutateAsync({ id: note?.id, values: { kind, title: title.trim(), body: body.trim() || null, date: when, repeat_rule: rep.rule, remind_at: remindAt ? localToInstant(when, remindAt, tz) : null } })
       useToasts.getState().show({ message: note ? 'Saved' : kind === 'task' ? 'Task added' : 'Note added' })
       onClose()
     } catch (err) {
@@ -86,6 +91,7 @@ export function NoteSheet({ note, date, onClose }: { note: CalendarNote | null; 
         <Field label="Title" error={errors.title}><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" autoFocus={!note} /></Field>
         <Field label="Details (optional)"><textarea className={`${inputCls} h-20 py-2`} value={body} onChange={(e) => setBody(e.target.value)} /></Field>
         <Field label="Date" error={errors.date}><input type="date" className={inputCls} value={when} onChange={(e) => setWhen(e.target.value)} /></Field>
+        <Field label="Remind me at (optional)" error={errors.remind} hint="Rings at this time, even in quiet hours."><input type="time" className={inputCls} value={remindAt} onChange={(e) => setRemindAt(e.target.value)} /></Field>
         <fieldset className="space-y-2">
           <legend className="text-sm text-muted">Repeat</legend>
           <div className="flex flex-wrap gap-2">

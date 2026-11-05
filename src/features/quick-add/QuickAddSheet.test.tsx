@@ -7,7 +7,7 @@ import { useToasts } from '@/ui/toastStore'
 
 const m = vi.hoisted(() => ({
   add: vi.fn(), update: vi.fn(), del: vi.fn(), suggestions: { data: [] as unknown[] },
-  createEntry: vi.fn(), deleteEntry: vi.fn(), savePerson: vi.fn(), createPlan: vi.fn(),
+  createEntry: vi.fn(), deleteEntry: vi.fn(), savePerson: vi.fn(), createPlan: vi.fn(), disable: vi.fn(),
   addOthers: vi.fn(), delOthers: vi.fn(), updOthers: vi.fn(),
 }))
 
@@ -39,6 +39,7 @@ vi.mock('@/features/money/queries', () => ({
   usePeople: () => ({ data: people }),
   useCreateEntry: () => ({ mutateAsync: m.createEntry }),
   useCreatePlan: () => ({ mutateAsync: m.createPlan }),
+  useDisableReminders: () => ({ mutateAsync: m.disable }),
   useDeleteEntry: () => ({ mutateAsync: m.deleteEntry }),
   useSavePerson: () => ({ mutateAsync: m.savePerson }),
 }))
@@ -66,6 +67,7 @@ beforeEach(() => {
   m.del.mockResolvedValue({})
   m.createEntry.mockResolvedValue({})
   m.createPlan.mockResolvedValue({})
+  m.disable.mockResolvedValue(undefined)
   m.addOthers.mockResolvedValue({ txn: {}, entries: [] })
   m.delOthers.mockResolvedValue({})
   m.updOthers.mockImplementation((_v, opts) => opts?.onSuccess?.())
@@ -551,6 +553,43 @@ describe('For someone else', () => {
     const { user, dialog } = await open({ edit: row as never })
     await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(toast()?.message).toBe("Couldn't update: Ravi has already paid ₹1500"))
+  })
+})
+
+describe('Reminders chip', () => {
+  it('on by default for a loan: nothing extra is called', async () => {
+    const { user, dialog } = await open({ kind: 'lent', personId: 'ravi' })
+    expect(within(dialog).getByRole('button', { name: '🔔 Reminders on' })).toHaveAttribute('aria-pressed', 'true')
+    await user.type(within(dialog).getByLabelText('Amount'), '100')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(m.createEntry).toHaveBeenCalled())
+    expect(m.disable).not.toHaveBeenCalled()
+  })
+  it('turned off: the new entry gets its reminders switched off', async () => {
+    const { user, dialog } = await open({ kind: 'borrowed', personId: 'ravi' })
+    await user.click(within(dialog).getByRole('button', { name: '🔔 Reminders on' }))
+    expect(within(dialog).getByRole('button', { name: '🔕 Reminders off' })).toBeInTheDocument()
+    await user.type(within(dialog).getByLabelText('Amount'), '100')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    const id = await waitFor(() => { const i = m.createEntry.mock.calls[0]?.[0].id; expect(i).toBeTruthy(); return i })
+    await waitFor(() => expect(m.disable).toHaveBeenCalledWith([id]))
+  })
+  it('also for money paid for friends: every friend entry is switched off', async () => {
+    m.addOthers.mockResolvedValue({ txn: {}, entries: ['e1', 'e2'] })
+    const { user, dialog } = await open()
+    await user.type(within(dialog).getByLabelText('Amount'), '600')
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    const sec = within(dialog).getByRole('region', { name: 'For someone else' })
+    await user.click(within(sec).getByRole('button', { name: '+ Add person' }))
+    await user.type(within(sec).getByLabelText('Friend 1'), 'Ravi Kumar')
+    await user.type(within(sec).getByLabelText('Friend 2'), 'Meera')
+    await user.click(within(dialog).getByRole('button', { name: '🔔 Reminders on' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(m.disable).toHaveBeenCalledWith(['e1', 'e2']))
+  })
+  it('not shown for a plain expense', async () => {
+    const { dialog } = await open()
+    expect(within(dialog).queryByRole('button', { name: /Reminders/ })).toBeNull()
   })
 })
 
