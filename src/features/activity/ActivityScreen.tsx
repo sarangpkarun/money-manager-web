@@ -1,5 +1,7 @@
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useAccounts } from '@/features/accounts/queries'
+import { useCategories } from '@/features/categories/queries'
 import { useToday, useWeekStart } from '@/features/profile/useToday'
 import type { ActivityRow } from '@/lib/db'
 import { formatMoney } from '@/lib/money'
@@ -14,10 +16,12 @@ import { showUndo, useToasts } from '@/ui/toastStore'
 import { toRpcFilters, activeFilterCount } from './filters'
 import { dayLabel, flattenGroups, groupByDay, monthLabel, shiftMonth } from './group'
 import { useActivity, useActivitySummary, useDeleteTransaction, useRestoreTransaction } from './queries'
+import { FilterSheet } from './FilterSheet'
 import { TxnDetail } from './TxnDetail'
 import { isEditable, rowTitle, TxnRow } from './TxnRow'
 import { useActivityFilters } from './useActivityFilters'
 
+// stable empty lists
 const ROW_H = 64
 const HEADER_H = 40
 
@@ -49,6 +53,9 @@ export default function ActivityScreen() {
   const rows = useMemo(() => list.data?.pages.flat() ?? [], [list.data])
   const items = useMemo(() => flattenGroups(groupByDay(rows)), [rows])
   const [selected, setSelected] = useState<ActivityRow | null>(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const accounts = useAccounts().data ?? []
+  const categories = useCategories().data ?? []
 
   // search box: local text, debounced into the URL
   const [text, setText] = useState(filters.q ?? '')
@@ -86,7 +93,8 @@ export default function ActivityScreen() {
     if (hasNextPage && !isFetchingNextPage && items.length > 0 && lastIndex >= items.length - 10) void fetchNextPage()
   }, [lastIndex, items.length, hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  const filtered = activeFilterCount(filters) > 0 || !!filters.q
+  const filterCount = activeFilterCount(filters)
+  const filtered = filterCount > 0 || !!filters.q
   const hasPreset = !!filters.preset
   const accountSel = filters.accounts ?? []
 
@@ -102,8 +110,15 @@ export default function ActivityScreen() {
           </div>
         </div>
 
-        <input type="search" aria-label="Search transactions" placeholder="Search title, place, notes, tags…" value={text}
-               onChange={(e) => setText(e.target.value)} className={inputCls} />
+        <div className="flex gap-2">
+          <input type="search" aria-label="Search transactions" placeholder="Search title, place, notes, tags…" value={text}
+                 onChange={(e) => setText(e.target.value)} className={inputCls} />
+          <button onClick={() => setFilterOpen(true)} aria-label={filterCount ? `Filters, ${filterCount} active` : 'Filters'}
+                  className={`relative h-12 w-12 shrink-0 rounded-xl border ${filterCount ? 'border-accent bg-accent text-white' : 'border-line bg-surface-2'}`}>
+            <span aria-hidden>⚙︎</span>
+            {filterCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-money-red px-1 text-xs text-white">{filterCount}</span>}
+          </button>
+        </div>
 
         <div className="grid grid-cols-3 gap-2 rounded-2xl bg-surface p-3 text-center" aria-label="Totals">
           {(['spent', 'received', 'net'] as const).map((k) => (
@@ -171,6 +186,7 @@ export default function ActivityScreen() {
         {isFetchingNextPage && <div className="p-4 text-center text-sm text-muted">Loading more…</div>}
       </div>
 
+      {filterOpen && <FilterSheet filters={filters} accounts={accounts} categories={categories} onApply={setFilters} onClose={() => setFilterOpen(false)} />}
       {selected && (
         <TxnDetail row={selected} onClose={() => setSelected(null)}
                    onEdit={() => { openQuickAdd({ edit: selected }); setSelected(null) }}

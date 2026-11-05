@@ -21,6 +21,10 @@ vi.mock('./queries', () => ({
   useDeleteTransaction: () => ({ mutateAsync: m.del }),
   useRestoreTransaction: () => ({ mutate: m.restore }),
 }))
+vi.mock('@/features/accounts/queries', () => ({
+  useAccounts: () => ({ data: [{ id: '11111111-1111-4111-8111-111111111111', name: 'Cash', archived: false }, { id: '22222222-2222-4222-8222-222222222222', name: 'Bank', archived: false }] }),
+}))
+vi.mock('@/features/categories/queries', () => ({ useCategories: () => ({ data: [{ id: 'c1', name: 'Food', kind: 'expense', icon: null, archived: false }] }) }))
 vi.mock('@/features/profile/useToday', () => ({ useToday: () => '2026-11-05', useWeekStart: () => 1 }))
 
 import ActivityScreen from './ActivityScreen'
@@ -118,6 +122,26 @@ describe('Activity list', () => {
     expect(lastFilters()).toMatchObject({ from: '2026-11-05', to: '2026-11-05', kinds: ['expense'], q: 'lunch' })
     expect(screen.getByLabelText('Search transactions')).toHaveValue('lunch')
     expect(screen.getByRole('button', { name: 'Previous month' })).toBeDisabled() // a preset overrides the month
+  })
+})
+
+describe('filter sheet', () => {
+  it('opens from the filter button, applies into the URL and shows the active count', async () => {
+    const user = userEvent.setup()
+    ui()
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Filters' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Spent' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Today' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }))
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/activity?d=today&type=spend'))
+    expect(screen.getByRole('button', { name: 'Filters, 2 active' })).toBeInTheDocument()
+    expect(lastFilters()).toMatchObject({ kinds: ['expense'], from: '2026-11-05', to: '2026-11-05' })
+  })
+  it('shows the badge for filters already in the URL', () => {
+    ui('/activity?type=transfer,spend&min=100')
+    expect(screen.getByRole('button', { name: 'Filters, 2 active' })).toBeInTheDocument()
   })
 })
 
