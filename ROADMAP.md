@@ -385,3 +385,11 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 - [ ] Push spike on the installed iPhone PWA. Result: ______ (go / no-go for Phase 7, see Q1).
 
 **Notes:** Node 22 required (`.nvmrc`). TypeScript pinned to 6.x because typescript-eslint does not support 7 yet.
+
+---
+
+## Phase 1 status (updated 2026-11-05)
+
+**Done:** `src/lib` money/dates/interest/EMI/schedule/allocate/labels/respread/prepay with rules documented in `src/lib/README.md`. 207 tests (incl. property tests and scenarios B, C, D), coverage 99.6% statements / 98.5% branches (gate: 95/90), golden fixture `tests/fixtures/schedule-cases.json` (14 cases) ready for Phase 5 SQL parity. Textbook check: ₹1,00,000 at 12% over 12 months gives EMI ₹8,884.88.
+
+**Decisions recorded:** flat = one-time % of principal; simple (plan) = months/12 or weeks/52; skip shifts the row and later unpaid rows; change amount re-spreads over later unpaid rows; extra payment shrinks from the last row; principal and interest split independently so no row can go negative.
