@@ -1,6 +1,7 @@
 import type { ActivityRow } from '@/lib/db'
 import { categoryIcon } from '@/lib/palette'
 import { Amount, type AmountTone } from '@/ui/Amount'
+import { pendingBadge } from './rowText'
 
 /** Transactions created by a loan, EMI or instalment belong to that entry: they are changed from the entry, never directly. */
 export const isLinked = (r: Pick<ActivityRow, 'entry_id'>) => !!r.entry_id
@@ -20,13 +21,16 @@ export function TxnRow({ row, onOpen }: { row: ActivityRow; onOpen: () => void }
   const tone = rowTone(row.kind)
   const icon = row.kind === 'transfer' ? '↔️' : categoryIcon({ name: row.category_name ?? '', icon: row.category_icon })
   const sub = [row.place, row.kind === 'transfer' ? null : row.account_name].filter(Boolean).join(' · ')
+  const badge = pendingBadge(row.others)
   return (
     <button onClick={onOpen} className="flex min-h-16 w-full items-center gap-3 px-4 py-2 text-left" aria-label={`${rowTitle(row)}, open details`}>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg"
             style={{ background: `${row.category_color ?? '#64748b'}26` }} aria-hidden>{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{rowTitle(row)}</span>
-        {sub && <span className="block truncate text-sm text-muted">{sub}</span>}
+        {(sub || badge) && (
+          <span className="block truncate text-sm text-muted">{sub}{badge && <span className="text-money-amber">{sub ? ' · ' : ''}{badge}</span>}</span>
+        )}
       </span>
       <Amount paise={row.amount_paise} tone={tone} sign={tone !== 'neutral'} className="shrink-0 font-semibold" />
     </button>

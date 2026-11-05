@@ -10,6 +10,7 @@ import { useToasts } from '@/ui/toastStore'
 const m = vi.hoisted(() => ({
   rows: [] as unknown[], pending: false, filtersSeen: [] as unknown[], del: vi.fn(), restore: vi.fn(), fetchNext: vi.fn(),
   summary: { spent: 0, received: 0, net: 0, by_account: [] as unknown[] },
+  delPurchase: vi.fn(), restorePurchase: vi.fn(),
 }))
 
 vi.mock('./queries', () => ({
@@ -20,6 +21,10 @@ vi.mock('./queries', () => ({
   useActivitySummary: () => ({ data: m.summary }),
   useDeleteTransaction: () => ({ mutateAsync: m.del }),
   useRestoreTransaction: () => ({ mutate: m.restore }),
+}))
+vi.mock('./othersQueries', () => ({
+  useDeleteTransactionWithOthers: () => ({ mutateAsync: m.delPurchase }),
+  useRestorePurchase: () => ({ mutate: m.restorePurchase }),
 }))
 vi.mock('@/features/accounts/queries', () => ({
   useAccounts: () => ({ data: [{ id: '11111111-1111-4111-8111-111111111111', name: 'Cash', archived: false }, { id: '22222222-2222-4222-8222-222222222222', name: 'Bank', archived: false }] }),
@@ -215,6 +220,55 @@ describe('row actions', () => {
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('From')).toBeInTheDocument()
     expect(within(dialog).getByText('To')).toBeInTheDocument()
+  })
+})
+
+describe('purchases paid for others', () => {
+  const withFriends = () => {
+    m.rows = [row({ id: 'p1', title: 'Dinner', amount_paise: 3_000_000, for_other_paise: 3_000_000, account_name: 'HDFC Card', place: null,
+      others: [{ entry_id: 'e1', person_id: 'a', person_name: 'Arun', amount_paise: 3_000_000, pending_paise: 2_000_000 }] }), ...m.rows.slice(1)]
+  }
+  it('the row says who still owes how much, in the second line', () => {
+    withFriends()
+    ui()
+    expect(screen.getByRole('button', { name: 'Dinner, open details' })).toHaveTextContent('HDFC Card · ₹20,000 pending from Arun')
+  })
+  it('the detail shows your share and each friend with an Open entry button', async () => {
+    const user = userEvent.setup()
+    withFriends()
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Dinner, open details' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('₹30,000 was for someone else · your share ₹0')
+    const friends = within(dialog).getByRole('region', { name: 'Paid for others' })
+    expect(friends).toHaveTextContent('Arun')
+    expect(friends).toHaveTextContent('₹20,000 pending of ₹30,000')
+    expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    await user.click(within(friends).getByRole('button', { name: 'Open entry for Arun' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/money/entry/e1')
+  })
+  it('Delete uses the purchase delete and Undo restores the purchase with its friends', async () => {
+    const user = userEvent.setup()
+    withFriends()
+    m.delPurchase.mockResolvedValue({ txn: { id: 'p1' }, others: [{ person_id: 'a', amount_paise: 3_000_000 }] })
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Dinner, open details' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(m.delPurchase).toHaveBeenCalledWith('p1'))
+    expect(m.del).not.toHaveBeenCalled()
+    const toast = await screen.findByRole('status')
+    await user.click(within(toast).getByRole('button', { name: 'Undo' }))
+    expect(m.restorePurchase).toHaveBeenCalledWith({ txn: { id: 'p1' }, others: [{ person_id: 'a', amount_paise: 3_000_000 }] })
+  })
+  it('once a friend has paid, delete explains what to do first', async () => {
+    const user = userEvent.setup()
+    withFriends()
+    m.delPurchase.mockRejectedValueOnce(new Error('Arun has already paid ₹10000. Delete those payments first.'))
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Dinner, open details' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByText("Couldn't delete: Arun has already paid ₹10000. Delete those payments first.")).toBeInTheDocument()
+    expect(m.restorePurchase).not.toHaveBeenCalled()
   })
 })
 

@@ -5,6 +5,7 @@ import { Amount } from '@/ui/Amount'
 import { secondaryBtn } from '@/ui/Field'
 import { Sheet } from '@/ui/Sheet'
 import { isEditable, isLinked, rowTitle, rowTone } from './TxnRow'
+import { yourShare } from './rowText'
 
 const KIND_LABEL: Record<string, string> = {
   expense: 'Spent', income: 'Received', transfer: 'Transfer', debt_out: 'Money lent / repaid', debt_in: 'Money received back',
@@ -22,8 +23,28 @@ export function TxnDetail({ row, onClose, onEdit, onDelete, onOpenEntry }: { row
     <Sheet open onOpenChange={(o) => !o && onClose()} title={rowTitle(row)} description={KIND_LABEL[row.kind] ?? row.kind}>
       <div className="mb-2 text-center">
         <Amount paise={row.amount_paise} tone={tone} sign={tone !== 'neutral'} className="text-4xl font-bold" />
-        {row.for_other_paise > 0 && <p className="text-sm text-muted">{formatMoney(row.for_other_paise)} was for someone else</p>}
+        {row.for_other_paise > 0 && (
+          <p className="text-sm text-muted">{formatMoney(row.for_other_paise)} was for someone else · your share <span className="tabular text-fg">{formatMoney(yourShare(row))}</span></p>
+        )}
       </div>
+      {(row.others?.length ?? 0) > 0 && (
+        <section aria-label="Paid for others" className="mb-3 rounded-2xl bg-surface-2 px-3 py-1">
+          <h3 className="pt-2 text-sm font-medium text-muted">Paid for others</h3>
+          <ul className="divide-y divide-line">
+            {row.others!.map((o) => (
+              <li key={o.entry_id} className="flex min-h-12 items-center justify-between gap-2">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{o.person_name ?? 'Someone'}</span>
+                  <span className={`block text-sm ${o.pending_paise > 0 ? 'text-money-amber' : 'text-money-green'}`}>
+                    {o.pending_paise > 0 ? `${formatMoney(o.pending_paise)} pending of ${formatMoney(o.amount_paise)}` : `Paid back ${formatMoney(o.amount_paise)}`}
+                  </span>
+                </span>
+                <button className="min-h-11 px-2 text-sm font-medium text-accent" aria-label={`Open entry for ${o.person_name ?? 'someone'}`} onClick={() => onOpenEntry?.(o.entry_id)}>Open entry</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <dl className="divide-y divide-line">
         <Line label="Date">{row.date}</Line>
         {row.kind === 'transfer'

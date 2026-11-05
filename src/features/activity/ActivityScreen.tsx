@@ -17,6 +17,7 @@ import { showUndo, useToasts } from '@/ui/toastStore'
 import { toRpcFilters, activeFilterCount } from './filters'
 import { dayLabel, flattenGroups, groupByDay, monthLabel, shiftMonth } from './group'
 import { useActivity, useActivitySummary, useDeleteTransaction, useRestoreTransaction } from './queries'
+import { useDeleteTransactionWithOthers, useRestorePurchase } from './othersQueries'
 import { FilterSheet } from './FilterSheet'
 import { TxnDetail } from './TxnDetail'
 import { isEditable, isLinked, rowTitle, TxnRow } from './TxnRow'
@@ -29,14 +30,22 @@ const HEADER_H = 40
 function useDeleteWithUndo() {
   const del = useDeleteTransaction()
   const restore = useRestoreTransaction()
+  const delPurchase = useDeleteTransactionWithOthers()
+  const restorePurchase = useRestorePurchase()
   return useCallback(async (row: ActivityRow) => {
     try {
+      if (row.others?.length) {
+        // a purchase friends owe money on: blocked with a clear message once anyone has paid; otherwise Undo restores it with the friends
+        const snap = await delPurchase.mutateAsync(row.id)
+        showUndo(`Deleted ${formatMoney(row.amount_paise)} · ${rowTitle(row)}`, () => restorePurchase.mutate(snap))
+        return
+      }
       const full = await del.mutateAsync(row.id)
       showUndo(`Deleted ${formatMoney(row.amount_paise)} · ${rowTitle(row)}`, () => restore.mutate(full))
     } catch (e) {
-      useToasts.getState().show({ message: `Couldn't delete: ${(e as Error).message}` })
+      useToasts.getState().show({ message: `Couldn't delete: ${(e as Error).message}`, duration: 8000 })
     }
-  }, [del, restore])
+  }, [del, restore, delPurchase, restorePurchase])
 }
 
 export default function ActivityScreen() {

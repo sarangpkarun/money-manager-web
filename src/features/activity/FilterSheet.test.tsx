@@ -104,3 +104,23 @@ describe('FilterSheet', () => {
     expect(onApply).toHaveBeenCalledWith({ q: 'taxi' })
   })
 })
+
+describe('Paid for others, not returned yet', () => {
+  it('toggles the chip and applies it as a filter', async () => {
+    const user = userEvent.setup()
+    const dialog = await open()
+    const chip = within(dialog).getByRole('button', { name: 'Paid for others, not returned yet' })
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await user.click(chip)
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }))
+    expect(onApply).toHaveBeenCalledWith({ others: 'pending' })
+  })
+  it('starts selected when the filter is already on, and Clear removes it', async () => {
+    const user = userEvent.setup()
+    const dialog = await open({ others: 'pending' })
+    expect(within(dialog).getByRole('button', { name: 'Paid for others, not returned yet' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(dialog).getByRole('button', { name: 'Clear all' }))
+    expect(onApply).toHaveBeenCalledWith({})
+  })
+})
