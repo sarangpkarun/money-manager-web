@@ -86,6 +86,12 @@ isOneToOne: false
       referencedRelation: "people"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "entries_person_id_fkey"
+      columns: ["person_id"]
+isOneToOne: false
+      referencedRelation: "people_balances"
+      referencedColumns: ["person_id"]
+    },{
       foreignKeyName: "entries_source_txn_id_fkey"
       columns: ["source_txn_id"]
 isOneToOne: false
@@ -114,13 +120,13 @@ isOneToOne: false
                   ]
                 },"payments": {
                   Row: {
-                    "account_id": string | null,"amount_paise": number,"created_at": string | null,"entry_id": string,"id": string,"mode": Database["public"]['Enums']["pay_mode"] | null,"note": string | null,"paid_on": string,"schedule_item_id": string | null,"user_id": string
+                    "account_id": string | null,"amount_paise": number,"created_at": string | null,"entry_id": string,"id": string,"mode": Database["public"]['Enums']["pay_mode"] | null,"note": string | null,"paid_on": string,"schedule_item_id": string | null,"txn_id": string | null,"user_id": string
                   }
                   Insert: {
-                    "account_id"?: string | null,"amount_paise": number,"created_at"?: string | null,"entry_id": string,"id"?: string,"mode"?: Database["public"]['Enums']["pay_mode"] | null,"note"?: string | null,"paid_on": string,"schedule_item_id"?: string | null,"user_id"?: string
+                    "account_id"?: string | null,"amount_paise": number,"created_at"?: string | null,"entry_id": string,"id"?: string,"mode"?: Database["public"]['Enums']["pay_mode"] | null,"note"?: string | null,"paid_on": string,"schedule_item_id"?: string | null,"txn_id"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "account_id"?: string | null,"amount_paise"?: number,"created_at"?: string | null,"entry_id"?: string,"id"?: string,"mode"?: Database["public"]['Enums']["pay_mode"] | null,"note"?: string | null,"paid_on"?: string,"schedule_item_id"?: string | null,"user_id"?: string
+                    "account_id"?: string | null,"amount_paise"?: number,"created_at"?: string | null,"entry_id"?: string,"id"?: string,"mode"?: Database["public"]['Enums']["pay_mode"] | null,"note"?: string | null,"paid_on"?: string,"schedule_item_id"?: string | null,"txn_id"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -146,6 +152,12 @@ isOneToOne: false
       columns: ["schedule_item_id"]
 isOneToOne: false
       referencedRelation: "schedule_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_txn_id_fkey"
+      columns: ["txn_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
       referencedColumns: ["id"]
     }
                   ]
@@ -279,15 +291,88 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"people_balances": {
+                  Row: {
+                    "archived": boolean | null,"email": string | null,"entry_count": number | null,"i_owe_paise": number | null,"last_entry_date": string | null,"name": string | null,"open_count": number | null,"owed_to_me_paise": number | null,"person_id": string | null,"phone": string | null,"user_id": string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Functions: {
             "activity_summary":
 { Args: { "p_filters"?: Json }; Returns: Json
                            },
+"create_entry":
+{ Args: { "p_account": string,"p_amount": number,"p_due"?: string,"p_id": string,"p_interest"?: Database["public"]['Enums']["interest_type"],"p_kind": Database["public"]['Enums']["entry_kind"],"p_notes"?: string,"p_person": string,"p_rate_bps"?: number,"p_start": string,"p_title": string }; Returns: {
+              "created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"dashboard_core":
+{ Args: { "p_filters"?: Json,"p_month": string,"p_today": string }; Returns: Json
+                           },
 "dashboard_summary":
 { Args: { "p_filters"?: Json,"p_month": string,"p_today": string }; Returns: Json
                            },
+"delete_entry":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"delete_payment":
+{ Args: { "p_id": string }; Returns: {
+              "created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "filter_transactions":
 { Args: { "p_filters": Json }; Returns: {
               "account_id": string | null,
@@ -319,6 +404,63 @@ isOneToOne: false
 "is_verified":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"mark_unpaid":
+{ Args: { "p_entry": string }; Returns: {
+              "created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"merge_people":
+{ Args: { "p_drop": string,"p_keep": string }; Returns: {
+              "archived": boolean | null,
+"email": string | null,
+"id": string,
+"name": string,
+"notes": string | null,
+"phone": string | null,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "people"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"money_history":
+{ Args: { "p_cursor"?: Json,"p_limit"?: number }; Returns: {
+              "direction": Database["public"]['Enums']["entry_dir"],"due_date": string,"id": string,"kind": Database["public"]['Enums']["entry_kind"],"paid_paise": number,"person_id": string,"person_name": string,"principal_paise": number,"settled_on": string,"start_date": string,"title": string,"total_paise": number
+            }[]
+                           },
+"money_overview":
+{ Args: { "p_today": string }; Returns: Json
+                           },
+"money_stats":
+{ Args: { "p_today": string }; Returns: Json
+                           },
 "quick_add_transaction":
 { Args: { "p_account": string,"p_amount": number,"p_category"?: string,"p_date": string,"p_id": string,"p_kind": Database["public"]['Enums']["txn_kind"],"p_notes"?: string,"p_place"?: string,"p_tags"?: (string)[],"p_title"?: string,"p_to_account"?: string }; Returns: {
               "account_id": string | null,
@@ -347,6 +489,36 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"record_payment":
+{ Args: { "p_account": string,"p_amount": number,"p_entry": string,"p_id": string,"p_mode"?: Database["public"]['Enums']["pay_mode"],"p_note"?: string,"p_paid_on": string }; Returns: {
+              "created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "search_transactions":
 { Args: { "p_cursor"?: Json,"p_filters"?: Json,"p_limit"?: number }; Returns: {
               "account_id": string,"account_name": string,"amount_paise": number,"category_color": string,"category_icon": string,"category_id": string,"category_name": string,"created_at": string,"date": string,"entry_id": string,"for_other_paise": number,"id": string,"kind": Database["public"]['Enums']["txn_kind"],"notes": string,"place": string,"tags": (string)[],"title": string,"to_account_id": string,"to_account_name": string
@@ -356,7 +528,37 @@ isOneToOne: false
 { Args: { "p_limit"?: number,"p_prefix": string }; Returns: {
               "account_id": string,"category_id": string,"last_date": string,"place": string,"title": string,"uses": number
             }[]
-                           }
+                           },
+"update_entry":
+{ Args: { "p_id": string,"p_patch": Json }; Returns: {
+              "created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } }
           }
           Enums: {
             "account_type": "cash"|"bank"|"upi"|"credit_card"|"wallet","entry_dir": "receive"|"pay","entry_kind": "lent"|"on_behalf"|"borrowed"|"emi_purchase"|"instalment","entry_status": "open"|"settled"|"cancelled","interest_type": "none"|"flat"|"simple"|"reducing","pay_mode": "cash"|"upi"|"bank"|"card"|"other","txn_kind": "expense"|"income"|"transfer"|"debt_out"|"debt_in"
