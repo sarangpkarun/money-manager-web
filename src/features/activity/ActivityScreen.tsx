@@ -19,7 +19,7 @@ import { dayLabel, flattenGroups, groupByDay, monthLabel, shiftMonth } from './g
 import { useActivity, useActivitySummary, useDeleteTransaction, useRestoreTransaction } from './queries'
 import { FilterSheet } from './FilterSheet'
 import { TxnDetail } from './TxnDetail'
-import { isEditable, rowTitle, TxnRow } from './TxnRow'
+import { isEditable, isLinked, rowTitle, TxnRow } from './TxnRow'
 import { useActivityFilters } from './useActivityFilters'
 
 // stable empty lists
@@ -176,7 +176,7 @@ export default function ActivityScreen() {
                     </div>
                   ) : (
                     <SwipeRow onSwipeRight={isEditable(it.row) ? () => openQuickAdd({ edit: it.row }) : undefined}
-                              onSwipeLeft={isEditable(it.row) || !it.row.entry_id ? () => void remove(it.row) : undefined}>
+                              onSwipeLeft={isLinked(it.row) ? undefined : () => void remove(it.row)}>
                       <TxnRow row={it.row} onOpen={() => setSelected(it.row)} />
                     </SwipeRow>
                   )}

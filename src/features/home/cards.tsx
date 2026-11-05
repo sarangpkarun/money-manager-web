@@ -14,6 +14,10 @@ import { topN, type BreakdownRow } from './breakdown'
 import type { Dashboard } from './dashboardTypes'
 import { vsLastMonth } from './delta'
 import { ageingBars } from '@/features/money/ageing'
+import { dueText } from '@/features/money/status'
+import { diffDays } from '@/lib/dates'
+import { debtFreeText, loadBars } from './emiLoad'
+import type { DueSoonItem } from './dashboardTypes'
 
 export function Card({ title, action, children, label }: { title: string; action?: ReactNode; children: ReactNode; label?: string }) {
   return (
@@ -237,6 +241,61 @@ export function PeopleCard({ d, onOpen }: { d: Dashboard; onOpen: () => void }) 
           )
         })}
       </div>
+    </Card>
+  )
+}
+
+// ------------------------------------------------------------------ Due soon
+export function DueSoonCard({ d, today, onPay, onOpen }: { d: Dashboard; today: string; onPay: (i: DueSoonItem) => void; onOpen: (entryId: string) => void }) {
+  const ds = d.due_soon
+  if (!ds || ds.items.length === 0) return null
+  const more = ds.total_count - ds.items.length
+  return (
+    <Card title="Due soon">
+      <ul className="divide-y divide-line">
+        {ds.items.map((i) => {
+          const late = i.due_date < today
+          const receiving = i.direction === 'receive'
+          return (
+            <li key={`${i.entry_id}-${i.seq}`} className="flex min-h-14 items-center justify-between gap-2 py-1">
+              <button className="min-w-0 flex-1 text-left" onClick={() => onOpen(i.entry_id)} aria-label={`${i.title}, ${i.name ?? 'no name'}, open details`}>
+                <span className="block truncate font-medium">{i.title}</span>
+                <span className={`block truncate text-sm ${late ? 'text-money-red' : 'text-muted'}`}>{i.name ? `${i.name} · ` : ''}{dueText(i.due_date, today, diffDays)}</span>
+              </button>
+              <Amount paise={i.remaining_paise} tone={receiving ? 'in' : 'out'} className="shrink-0 font-semibold" />
+              <button onClick={() => onPay(i)} aria-label={`${receiving ? 'Receive' : 'Pay'} ${i.title}`}
+                      className="min-h-11 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white">{receiving ? 'Receive' : 'Pay'}</button>
+            </li>
+          )
+        })}
+      </ul>
+      {more > 0 && <p className="mt-1 text-sm text-muted">+{more} more due soon</p>}
+    </Card>
+  )
+}
+
+// ------------------------------------------------------------------ EMI & loan load
+export function EmiLoadCard({ d, today, onOpen }: { d: Dashboard; today: string; onOpen: () => void }) {
+  const load = d.emi_load
+  if (!load || load.outstanding_paise === 0) return null
+  const bars = loadBars(load)
+  const free = debtFreeText(load.debt_free_date, today)
+  return (
+    <Card title="EMI & loan load" action={<button onClick={onOpen} className={linkBtn}>Open</button>}>
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm text-muted">Still to pay</span>
+        <Amount paise={load.outstanding_paise} tone="out" className="text-2xl font-bold" />
+      </div>
+      {load.overdue_paise > 0 && <div className="text-sm text-money-red">{formatMoney(load.overdue_paise)} overdue from earlier months</div>}
+      <ul className="mt-3 flex h-24 items-end gap-1" aria-label="Due each month for the next 12 months">
+        {bars.map((b) => (
+          <li key={b.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1" aria-label={`${b.label}: ${formatMoney(b.paise)}`}>
+            <span className={`w-full rounded-t ${b.first ? 'bg-accent' : 'bg-accent/50'}`} style={{ height: `${Math.max(b.fraction * 100, b.paise > 0 ? 4 : 0)}%` }} />
+            <span className="text-[10px] text-muted" aria-hidden>{b.label.slice(0, 1)}</span>
+          </li>
+        ))}
+      </ul>
+      {free && <p className="mt-2 text-sm text-muted">{free}</p>}
     </Card>
   )
 }

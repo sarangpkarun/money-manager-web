@@ -30,7 +30,7 @@ describe('TxnDetail', () => {
     render(<TxnDetail row={row({ kind: 'debt_out', entry_id: 'e9', title: 'Loan to Ravi' })} onClose={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} onOpenEntry={onOpenEntry} />)
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Open loan' }))
+    await user.click(screen.getByRole('button', { name: 'Open entry' }))
     expect(onOpenEntry).toHaveBeenCalledWith('e9')
   })
 })

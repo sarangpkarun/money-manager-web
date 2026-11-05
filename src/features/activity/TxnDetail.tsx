@@ -4,7 +4,7 @@ import { formatMoney } from '@/lib/money'
 import { Amount } from '@/ui/Amount'
 import { secondaryBtn } from '@/ui/Field'
 import { Sheet } from '@/ui/Sheet'
-import { isEditable, rowTitle, rowTone } from './TxnRow'
+import { isEditable, isLinked, rowTitle, rowTone } from './TxnRow'
 
 const KIND_LABEL: Record<string, string> = {
   expense: 'Spent', income: 'Received', transfer: 'Transfer', debt_out: 'Money lent / repaid', debt_in: 'Money received back',
@@ -16,7 +16,7 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
 
 /** Details plus Edit/Delete buttons: the accessible equivalent of the swipe actions. */
 export function TxnDetail({ row, onClose, onEdit, onDelete, onOpenEntry }: { row: ActivityRow; onClose: () => void; onEdit: () => void; onDelete: () => void; onOpenEntry?: (id: string) => void }) {
-  const linked = !isEditable(row) && !!row.entry_id
+  const linked = isLinked(row)
   const tone = rowTone(row.kind)
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()} title={rowTitle(row)} description={KIND_LABEL[row.kind] ?? row.kind}>
@@ -35,8 +35,8 @@ export function TxnDetail({ row, onClose, onEdit, onDelete, onOpenEntry }: { row
       </dl>
       {linked ? (
         <div className="mt-4 space-y-2">
-          <p className="text-sm text-muted">This belongs to a loan. Change or delete it from the loan, so balances stay correct.</p>
-          <button className={secondaryBtn} onClick={() => onOpenEntry?.(row.entry_id as string)}>Open loan</button>
+          <p className="text-sm text-muted">This belongs to a loan or EMI. Change or delete it from there, so balances and schedules stay correct.</p>
+          <button className={secondaryBtn} onClick={() => onOpenEntry?.(row.entry_id as string)}>Open entry</button>
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3">

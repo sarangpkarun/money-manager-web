@@ -47,12 +47,12 @@ export function OwedList({ direction, entries, today, onOpen, onAdd }: {
                 <li key={e.id}>
                   <button onClick={() => onOpen(e.id)} aria-label={`${e.title}, ${g.name}, ${status}, open details`} className="block min-h-16 w-full px-4 py-3 text-left">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate font-medium">{e.title}</span>
+                      <span className="min-w-0 truncate font-medium">{e.title}{e.kind === 'emi_purchase' || e.kind === 'instalment' ? <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-xs font-normal text-muted">{e.kind === 'emi_purchase' ? 'EMI' : 'Instalments'}</span> : null}</span>
                       <Amount paise={e.outstanding_paise} className="shrink-0 font-semibold" />
                     </span>
                     <span className="mt-1 flex items-center justify-between gap-2 text-sm text-muted">
                       <span className="flex items-center gap-2"><EntryBadge status={status} /><span>{dueText(e.due_date, today, diffDays)}</span></span>
-                      {e.paid_paise > 0 && <span>{pct}% paid</span>}
+                      {e.rows_total > 1 ? <span>{e.rows_paid} of {e.rows_total} paid</span> : e.paid_paise > 0 && <span>{pct}% paid</span>}
                     </span>
                     {e.paid_paise > 0 && (
                       <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden>

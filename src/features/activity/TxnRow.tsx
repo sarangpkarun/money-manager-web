@@ -2,7 +2,9 @@ import type { ActivityRow } from '@/lib/db'
 import { categoryIcon } from '@/lib/palette'
 import { Amount, type AmountTone } from '@/ui/Amount'
 
-export const isEditable = (r: Pick<ActivityRow, 'kind'>) => r.kind === 'expense' || r.kind === 'income' || r.kind === 'transfer'
+/** Transactions created by a loan, EMI or instalment belong to that entry: they are changed from the entry, never directly. */
+export const isLinked = (r: Pick<ActivityRow, 'entry_id'>) => !!r.entry_id
+export const isEditable = (r: Pick<ActivityRow, 'kind' | 'entry_id'>) => !isLinked(r) && (r.kind === 'expense' || r.kind === 'income' || r.kind === 'transfer')
 
 export function rowTitle(r: ActivityRow): string {
   if (r.title) return r.title

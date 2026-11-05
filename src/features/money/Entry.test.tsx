@@ -248,7 +248,7 @@ describe('Entry detail for plans', () => {
     await user.click(screen.getAllByRole('button', { name: 'Pay instalment 3' })[0]!)
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByLabelText('Amount')).toHaveValue('1000')
-    await user.click(within(dialog).getByRole('button', { name: 'Pay', exact: true }))
+    await user.click(within(dialog).getByRole('button', { name: 'Pay' }))
     expect(m.record.mock.calls[0]?.[0]).toMatchObject({ entry_id: 'e1', amount_paise: 100_000, target_seq: 3 })
   })
 
@@ -261,7 +261,7 @@ describe('Entry detail for plans', () => {
     expect(within(dialog).getByLabelText('Amount')).toHaveValue('1000')
     await user.click(within(dialog).getByRole('button', { name: 'Everything left' }))
     expect(within(dialog).getByLabelText('Amount')).toHaveValue('2000')
-    await user.click(within(dialog).getByRole('button', { name: 'Pay', exact: true }))
+    await user.click(within(dialog).getByRole('button', { name: 'Pay' }))
     expect(m.record.mock.calls[0]?.[0]).toMatchObject({ amount_paise: 200_000, target_seq: null })
   })
 

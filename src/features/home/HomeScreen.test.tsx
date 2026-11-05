@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUi } from '@/lib/uiStore'
 import type { Dashboard } from './dashboardTypes'
 
@@ -20,6 +20,8 @@ vi.mock('@/features/profile/useProfile', () => ({ useProfile: () => ({ data: { n
 vi.mock('@/features/profile/useToday', () => ({ useToday: () => '2026-11-10', useWeekStart: () => 1 }))
 vi.mock('@/features/accounts/queries', () => ({ useAccounts: () => ({ data: [{ id: CASH, name: 'Cash', archived: false }] }) }))
 vi.mock('@/features/categories/queries', () => ({ useCategories: () => ({ data: [] }) }))
+const rec = vi.hoisted(() => ({ record: vi.fn() }))
+vi.mock('@/features/money/queries', () => ({ useRecordPayment: () => ({ mutateAsync: rec.record, isPending: false }) }))
 
 import HomeScreen from './HomeScreen'
 
@@ -42,6 +44,13 @@ const dash = (o: Partial<Dashboard> = {}): Dashboard => ({
 
 function Where() { const l = useLocation(); return <div data-testid="where">{l.pathname}{l.search}</div> }
 const ui = () => render(<MemoryRouter initialEntries={['/']}><Where /><HomeScreen /></MemoryRouter>)
+
+beforeAll(() => {
+  window.matchMedia = window.matchMedia || ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false, onchange: null }) as MediaQueryList)
+  globalThis.ResizeObserver = globalThis.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} }
+  Element.prototype.setPointerCapture = Element.prototype.setPointerCapture || (() => {})
+  Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture || (() => {})
+})
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -208,6 +217,65 @@ describe('Home dashboard', () => {
     m.data = { ...withMoney(), people: { ...withMoney().people!, open_count: 0 } }
     ui()
     expect(screen.queryByRole('region', { name: 'Money with people' })).toBeNull()
+  })
+
+  const withPlans = () => dash({
+    due_soon: { total_count: 7, items: [
+      { entry_id: 'e1', seq: 2, kind: 'borrowed', direction: 'pay', title: 'From Ravi', name: 'Ravi', due_date: '2026-11-08', remaining_paise: 500_000 },
+      { entry_id: 'e2', seq: 1, kind: 'lent', direction: 'receive', title: 'Lent to Meera', name: 'Meera', due_date: '2026-11-12', remaining_paise: 120_000 },
+    ] },
+    emi_load: { months: Array.from({ length: 12 }, (_, i) => ({ month: `2026-${String(i + 11 > 12 ? i - 1 : i + 11).padStart(2, '0')}`, due_paise: i < 3 ? 500_000 : 0 })), overdue_paise: 200_000, outstanding_paise: 1_500_000, debt_free_date: '2027-01-10', open_count: 2 },
+  })
+
+  it('Due soon lists overdue and upcoming rows with a Pay / Receive button and an overflow count', () => {
+    m.data = withPlans()
+    ui()
+    const card = screen.getByRole('region', { name: 'Due soon' })
+    expect(card).toHaveTextContent('From Ravi')
+    expect(card).toHaveTextContent('2 days overdue')
+    expect(card).toHaveTextContent('Due in 2 days')
+    expect(card).toHaveTextContent('+5 more due soon')
+    expect(within(card).getByRole('button', { name: 'Pay From Ravi' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Receive Lent to Meera' })).toBeInTheDocument()
+  })
+
+  it('Pay opens the payment sheet for exactly that row; the card opens the entry', async () => {
+    const user = userEvent.setup()
+    m.data = withPlans()
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Pay From Ravi' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByLabelText('Amount')).toHaveValue('5000')
+    await user.click(within(dialog).getByRole('button', { name: 'Pay' }))
+    expect(rec.record.mock.calls[0]?.[0]).toMatchObject({ entry_id: 'e1', amount_paise: 500_000, target_seq: 2 })
+  })
+
+  it('tapping a due item opens its entry', async () => {
+    const user = userEvent.setup()
+    m.data = withPlans()
+    ui()
+    await user.click(screen.getByRole('button', { name: 'From Ravi, Ravi, open details' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/money/entry/e1')
+  })
+
+  it('EMI & loan load shows what is left, overdue, 12 monthly bars and the debt-free date', () => {
+    m.data = withPlans()
+    ui()
+    const card = screen.getByRole('region', { name: 'EMI & loan load' })
+    expect(card).toHaveTextContent('₹15,000')
+    expect(card).toHaveTextContent('₹2,000 overdue from earlier months')
+    expect(within(card).getAllByRole('listitem')).toHaveLength(12)
+    expect(card).toHaveTextContent('Debt-free by Jan 2027 (2 months)')
+  })
+
+  it('neither plan card appears without data or with nothing owed', () => {
+    ui()
+    expect(screen.queryByRole('region', { name: 'Due soon' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'EMI & loan load' })).toBeNull()
+    m.data = dash({ due_soon: { items: [], total_count: 0 }, emi_load: { months: [], overdue_paise: 0, outstanding_paise: 0, debt_free_date: null, open_count: 0 } })
+    ui()
+    expect(screen.queryByRole('region', { name: 'Due soon' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'EMI & loan load' })).toBeNull()
   })
 })
 

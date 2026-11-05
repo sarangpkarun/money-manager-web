@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAccounts } from '@/features/accounts/queries'
 import { FilterSheet } from '@/features/activity/FilterSheet'
@@ -10,10 +10,13 @@ import { useToday } from '@/features/profile/useToday'
 import { useUi } from '@/lib/uiStore'
 import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
-import { CardsCard, NetPositionCard, PeopleCard, RecentCard, ThisMonthCard, WhereItWentCard, type Drill } from './cards'
+import { CardsCard, DueSoonCard, EmiLoadCard, NetPositionCard, PeopleCard, RecentCard, ThisMonthCard, WhereItWentCard, type Drill } from './cards'
+import type { DueSoonItem } from './dashboardTypes'
 import { applyLayout, type CardId } from './layout'
 import { useDashboard } from './queries'
 import { useHomeFilters } from './useHomeFilters'
+
+const PaymentSheet = lazy(() => import('@/features/money/PaymentSheet').then((m) => ({ default: m.PaymentSheet })))
 
 export default function HomeScreen() {
   const navigate = useNavigate()
@@ -26,6 +29,7 @@ export default function HomeScreen() {
   const { filters, setFilters, rpc } = useHomeFilters()
   const dash = useDashboard(month, today, rpc)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [pay, setPay] = useState<DueSoonItem | null>(null)
   const accounts = useAccounts().data ?? []
   const categories = useCategories().data ?? []
   const filterCount = activeFilterCount(filters)
@@ -41,7 +45,7 @@ export default function HomeScreen() {
   }
   const seeAll = () => drill({})
 
-  const order = useMemo(() => applyLayout(profile?.dashboard_layout, ['this_month', 'where_it_went', 'net_position', 'people', 'cards', 'recent']), [profile?.dashboard_layout])
+  const order = useMemo(() => applyLayout(profile?.dashboard_layout, ['this_month', 'where_it_went', 'net_position', 'due_soon', 'people', 'emi_load', 'cards', 'recent']), [profile?.dashboard_layout])
   const empty = !!d && d.month.count === 0 && d.recent.length === 0
 
   const render = (id: CardId) => {
@@ -51,6 +55,8 @@ export default function HomeScreen() {
       case 'where_it_went': return <WhereItWentCard key={id} d={d} drill={drill} />
       case 'net_position': return <NetPositionCard key={id} d={d} onOpen={() => navigate('/money')} />
       case 'people': return <PeopleCard key={id} d={d} onOpen={() => navigate('/money')} />
+      case 'due_soon': return <DueSoonCard key={id} d={d} today={today} onPay={setPay} onOpen={(eid) => navigate(`/money/entry/${eid}`)} />
+      case 'emi_load': return <EmiLoadCard key={id} d={d} today={today} onOpen={() => navigate('/money')} />
       case 'cards': return <CardsCard key={id} d={d} drill={drill} />
       case 'recent': return <RecentCard key={id} d={d} onSeeAll={seeAll} />
       default: return null // reserved for later phases
@@ -96,6 +102,11 @@ export default function HomeScreen() {
         order.map(render)
       )}
 
+      {pay && (
+        <Suspense fallback={null}>
+          <PaymentSheet entryId={pay.entry_id} direction={pay.direction} remaining={pay.remaining_paise} targetSeq={pay.seq} today={today} onClose={() => setPay(null)} />
+        </Suspense>
+      )}
       {filterOpen && <FilterSheet hideDate filters={filters} accounts={accounts} categories={categories} onApply={setFilters} onClose={() => setFilterOpen(false)} />}
     </div>
   )

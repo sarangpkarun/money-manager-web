@@ -77,6 +77,19 @@ describe('Money tab', () => {
     expect(screen.queryByRole('region', { name: 'Chitra' })).toBeNull() // that one is on the I owe tab
   })
 
+  it('plans show how many instalments are paid and an EMI tag', async () => {
+    const user = userEvent.setup()
+    m.overview = overview([
+      entry({ id: 'e9', direction: 'pay', kind: 'emi_purchase', title: 'Phone', person_id: null, person_name: 'Croma', total_paise: 540_000, paid_paise: 180_000, outstanding_paise: 360_000, rows_total: 9, rows_paid: 3, due_date: '2026-12-10' }),
+    ])
+    ui()
+    await user.click(screen.getByRole('tab', { name: 'I owe' }))
+    const croma = screen.getByRole('region', { name: 'Croma' })
+    expect(croma).toHaveTextContent('3 of 9 paid')
+    expect(croma).toHaveTextContent('EMI')
+    expect(croma).toHaveTextContent('Due in 25 days')
+  })
+
   it('I owe shows borrowed entries', async () => {
     const user = userEvent.setup()
     ui()

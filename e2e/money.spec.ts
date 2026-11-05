@@ -96,7 +96,7 @@ test('a loan transaction in Activity points at the loan instead of offering Dele
   await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible()
   await page.getByRole('button', { name: 'Lent to Asha, open details' }).click()
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Delete' })).toHaveCount(0)
-  await page.getByRole('dialog').getByRole('button', { name: 'Open loan' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Open entry' }).click()
   await expect(page).toHaveURL(/\/money\/entry\//)
   await expect(page.getByRole('region', { name: 'Progress' })).toContainText('₹250')
 })
