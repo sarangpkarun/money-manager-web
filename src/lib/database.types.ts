@@ -127,6 +127,12 @@ isOneToOne: false
       foreignKeyName: "payments_account_id_fkey"
       columns: ["account_id"]
 isOneToOne: false
+      referencedRelation: "account_balances"
+      referencedColumns: ["account_id"]
+    },{
+      foreignKeyName: "payments_account_id_fkey"
+      columns: ["account_id"]
+isOneToOne: false
       referencedRelation: "accounts"
       referencedColumns: ["id"]
     },{
@@ -235,6 +241,12 @@ isOneToOne: false
       foreignKeyName: "transactions_account_id_fkey"
       columns: ["account_id"]
 isOneToOne: false
+      referencedRelation: "account_balances"
+      referencedColumns: ["account_id"]
+    },{
+      foreignKeyName: "transactions_account_id_fkey"
+      columns: ["account_id"]
+isOneToOne: false
       referencedRelation: "accounts"
       referencedColumns: ["id"]
     },{
@@ -247,6 +259,12 @@ isOneToOne: false
       foreignKeyName: "transactions_to_account_id_fkey"
       columns: ["to_account_id"]
 isOneToOne: false
+      referencedRelation: "account_balances"
+      referencedColumns: ["account_id"]
+    },{
+      foreignKeyName: "transactions_to_account_id_fkey"
+      columns: ["to_account_id"]
+isOneToOne: false
       referencedRelation: "accounts"
       referencedColumns: ["id"]
     }
@@ -254,11 +272,87 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "account_balances": {
+                  Row: {
+                    "account_id": string | null,"archived": boolean | null,"balance_paise": number | null,"credit_limit_paise": number | null,"due_day": number | null,"name": string | null,"outstanding_paise": number | null,"sort": number | null,"statement_day": number | null,"type": Database["public"]['Enums']["account_type"] | null,"user_id": string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
-            "is_verified":
+            "activity_summary":
+{ Args: { "p_filters"?: Json }; Returns: Json
+                           },
+"filter_transactions":
+{ Args: { "p_filters": Json }; Returns: {
+              "account_id": string | null,
+"amount_paise": number,
+"category_id": string | null,
+"created_at": string | null,
+"date": string,
+"entry_id": string | null,
+"for_other_paise": number,
+"id": string,
+"kind": Database["public"]['Enums']["txn_kind"],
+"notes": string | null,
+"payment_id": string | null,
+"place": string | null,
+"receipt_path": string | null,
+"recurring_id": string | null,
+"tags": (string)[] | null,
+"title": string | null,
+"to_account_id": string | null,
+"updated_at": string | null,
+"user_id": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "transactions"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
+"is_verified":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"quick_add_transaction":
+{ Args: { "p_account": string,"p_amount": number,"p_category"?: string,"p_date": string,"p_id": string,"p_kind": Database["public"]['Enums']["txn_kind"],"p_notes"?: string,"p_place"?: string,"p_tags"?: (string)[],"p_title"?: string,"p_to_account"?: string }; Returns: {
+              "account_id": string | null,
+"amount_paise": number,
+"category_id": string | null,
+"created_at": string | null,
+"date": string,
+"entry_id": string | null,
+"for_other_paise": number,
+"id": string,
+"kind": Database["public"]['Enums']["txn_kind"],
+"notes": string | null,
+"payment_id": string | null,
+"place": string | null,
+"receipt_path": string | null,
+"recurring_id": string | null,
+"tags": (string)[] | null,
+"title": string | null,
+"to_account_id": string | null,
+"updated_at": string | null,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "transactions"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"search_transactions":
+{ Args: { "p_cursor"?: Json,"p_filters"?: Json,"p_limit"?: number }; Returns: {
+              "account_id": string,"account_name": string,"amount_paise": number,"category_color": string,"category_icon": string,"category_id": string,"category_name": string,"created_at": string,"date": string,"entry_id": string,"for_other_paise": number,"id": string,"kind": Database["public"]['Enums']["txn_kind"],"notes": string,"place": string,"tags": (string)[],"title": string,"to_account_id": string,"to_account_name": string
+            }[]
+                           },
+"title_suggestions":
+{ Args: { "p_limit"?: number,"p_prefix": string }; Returns: {
+              "account_id": string,"category_id": string,"last_date": string,"place": string,"title": string,"uses": number
+            }[]
                            }
           }
           Enums: {
