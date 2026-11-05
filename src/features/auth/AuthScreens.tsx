@@ -28,11 +28,13 @@ const btnCls = 'h-12 w-full rounded-xl bg-accent font-semibold text-white active
 
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-sm text-muted">{label}</span>
-      {children}
+    <div>
+      <label className="block">
+        <span className="mb-1 block text-sm text-muted">{label}</span>
+        {children}
+      </label>
       {error && <span role="alert" className="mt-1 block text-sm text-money-red">{error}</span>}
-    </label>
+    </div>
   )
 }
 

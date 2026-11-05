@@ -102,7 +102,7 @@ export function Shell() {
       </main>
 
       <nav aria-label="Main" className="pb-safe fixed inset-x-0 bottom-0 z-10 flex items-center border-t border-line bg-surface/95 backdrop-blur"
-           style={{ minHeight: 64 }}>
+           style={{ minHeight: 'calc(64px + env(safe-area-inset-bottom))' }}>
         <TabLink tab="home" active={tab === 'home'} />
         <TabLink tab="calendar" active={tab === 'calendar'} />
         <button aria-label="Quick add" onClick={() => setQuickAddOpen(true)}
