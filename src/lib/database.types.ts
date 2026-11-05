@@ -70,16 +70,22 @@ isOneToOne: false
                   ]
                 },"entries": {
                   Row: {
-                    "created_at": string | null,"direction": Database["public"]['Enums']["entry_dir"],"down_payment_paise": number | null,"due_date": string | null,"id": string,"interest": Database["public"]['Enums']["interest_type"],"kind": Database["public"]['Enums']["entry_kind"],"no_cost": boolean | null,"notes": string | null,"party_name": string | null,"person_id": string | null,"principal_paise": number,"rate_bps": number | null,"remind": boolean,"settled_on": string | null,"source_txn_id": string | null,"start_date": string,"status": Database["public"]['Enums']["entry_status"],"title": string,"total_payable_paise": number,"user_id": string
+                    "category_id": string | null,"created_at": string | null,"direction": Database["public"]['Enums']["entry_dir"],"down_payment_paise": number | null,"due_date": string | null,"id": string,"interest": Database["public"]['Enums']["interest_type"],"kind": Database["public"]['Enums']["entry_kind"],"no_cost": boolean | null,"notes": string | null,"party_name": string | null,"person_id": string | null,"principal_paise": number,"rate_bps": number | null,"remind": boolean,"settled_on": string | null,"source_txn_id": string | null,"start_date": string,"status": Database["public"]['Enums']["entry_status"],"title": string,"total_payable_paise": number,"user_id": string
                   }
                   Insert: {
-                    "created_at"?: string | null,"direction": Database["public"]['Enums']["entry_dir"],"down_payment_paise"?: number | null,"due_date"?: string | null,"id"?: string,"interest"?: Database["public"]['Enums']["interest_type"],"kind": Database["public"]['Enums']["entry_kind"],"no_cost"?: boolean | null,"notes"?: string | null,"party_name"?: string | null,"person_id"?: string | null,"principal_paise": number,"rate_bps"?: number | null,"remind"?: boolean,"settled_on"?: string | null,"source_txn_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["entry_status"],"title": string,"total_payable_paise": number,"user_id"?: string
+                    "category_id"?: string | null,"created_at"?: string | null,"direction": Database["public"]['Enums']["entry_dir"],"down_payment_paise"?: number | null,"due_date"?: string | null,"id"?: string,"interest"?: Database["public"]['Enums']["interest_type"],"kind": Database["public"]['Enums']["entry_kind"],"no_cost"?: boolean | null,"notes"?: string | null,"party_name"?: string | null,"person_id"?: string | null,"principal_paise": number,"rate_bps"?: number | null,"remind"?: boolean,"settled_on"?: string | null,"source_txn_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["entry_status"],"title": string,"total_payable_paise": number,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string | null,"direction"?: Database["public"]['Enums']["entry_dir"],"down_payment_paise"?: number | null,"due_date"?: string | null,"id"?: string,"interest"?: Database["public"]['Enums']["interest_type"],"kind"?: Database["public"]['Enums']["entry_kind"],"no_cost"?: boolean | null,"notes"?: string | null,"party_name"?: string | null,"person_id"?: string | null,"principal_paise"?: number,"rate_bps"?: number | null,"remind"?: boolean,"settled_on"?: string | null,"source_txn_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["entry_status"],"title"?: string,"total_payable_paise"?: number,"user_id"?: string
+                    "category_id"?: string | null,"created_at"?: string | null,"direction"?: Database["public"]['Enums']["entry_dir"],"down_payment_paise"?: number | null,"due_date"?: string | null,"id"?: string,"interest"?: Database["public"]['Enums']["interest_type"],"kind"?: Database["public"]['Enums']["entry_kind"],"no_cost"?: boolean | null,"notes"?: string | null,"party_name"?: string | null,"person_id"?: string | null,"principal_paise"?: number,"rate_bps"?: number | null,"remind"?: boolean,"settled_on"?: string | null,"source_txn_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["entry_status"],"title"?: string,"total_payable_paise"?: number,"user_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "entries_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "entries_person_id_fkey"
       columns: ["person_id"]
 isOneToOne: false
@@ -301,12 +307,47 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "activity_summary":
+            "_plan_replace":
+{ Args: { "p_action": string,"p_base": Json,"p_entry": string,"p_extra": number,"p_rows": Json }; Returns: undefined
+                           },
+"activity_summary":
 { Args: { "p_filters"?: Json }; Returns: Json
                            },
 "create_entry":
 { Args: { "p_account": string,"p_amount": number,"p_due"?: string,"p_id": string,"p_interest"?: Database["public"]['Enums']["interest_type"],"p_kind": Database["public"]['Enums']["entry_kind"],"p_notes"?: string,"p_person": string,"p_rate_bps"?: number,"p_start": string,"p_title": string }; Returns: {
-              "created_at": string | null,
+              "category_id": string | null,
+"created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"create_entry_with_plan":
+{ Args: { "p_account": string,"p_category": string,"p_down": number,"p_id": string,"p_interest": Database["public"]['Enums']["interest_type"],"p_kind": Database["public"]['Enums']["entry_kind"],"p_no_cost": boolean,"p_party": string,"p_person": string,"p_principal": number,"p_rate_bps": number,"p_rows": Json,"p_start": string,"p_title": string }; Returns: {
+              "category_id": string | null,
+"created_at": string | null,
 "direction": Database["public"]['Enums']["entry_dir"],
 "down_payment_paise": number | null,
 "due_date": string | null,
@@ -345,7 +386,8 @@ isOneToOne: false
                            },
 "delete_payment":
 { Args: { "p_id": string }; Returns: {
-              "created_at": string | null,
+              "category_id": string | null,
+"created_at": string | null,
 "direction": Database["public"]['Enums']["entry_dir"],
 "down_payment_paise": number | null,
 "due_date": string | null,
@@ -406,7 +448,8 @@ isOneToOne: false
                            },
 "mark_unpaid":
 { Args: { "p_entry": string }; Returns: {
-              "created_at": string | null,
+              "category_id": string | null,
+"created_at": string | null,
 "direction": Database["public"]['Enums']["entry_dir"],
 "down_payment_paise": number | null,
 "due_date": string | null,
@@ -461,6 +504,99 @@ isOneToOne: false
 "money_stats":
 { Args: { "p_today": string }; Returns: Json
                            },
+"plan_change_amount":
+{ Args: { "p_base": Json,"p_entry": string,"p_rows": Json }; Returns: {
+              "category_id": string | null,
+"created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"plan_extra_payment":
+{ Args: { "p_account": string,"p_amount": number,"p_base": Json,"p_entry": string,"p_id": string,"p_mode": Database["public"]['Enums']["pay_mode"],"p_note": string,"p_paid_on": string,"p_rows": Json }; Returns: {
+              "category_id": string | null,
+"created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"plan_skip_month":
+{ Args: { "p_base": Json,"p_entry": string,"p_rows": Json }; Returns: {
+              "category_id": string | null,
+"created_at": string | null,
+"direction": Database["public"]['Enums']["entry_dir"],
+"down_payment_paise": number | null,
+"due_date": string | null,
+"id": string,
+"interest": Database["public"]['Enums']["interest_type"],
+"kind": Database["public"]['Enums']["entry_kind"],
+"no_cost": boolean | null,
+"notes": string | null,
+"party_name": string | null,
+"person_id": string | null,
+"principal_paise": number,
+"rate_bps": number | null,
+"remind": boolean,
+"settled_on": string | null,
+"source_txn_id": string | null,
+"start_date": string,
+"status": Database["public"]['Enums']["entry_status"],
+"title": string,
+"total_payable_paise": number,
+"user_id": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "entries"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "quick_add_transaction":
 { Args: { "p_account": string,"p_amount": number,"p_category"?: string,"p_date": string,"p_id": string,"p_kind": Database["public"]['Enums']["txn_kind"],"p_notes"?: string,"p_place"?: string,"p_tags"?: (string)[],"p_title"?: string,"p_to_account"?: string }; Returns: {
               "account_id": string | null,
@@ -490,8 +626,9 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "record_payment":
-{ Args: { "p_account": string,"p_amount": number,"p_entry": string,"p_id": string,"p_mode"?: Database["public"]['Enums']["pay_mode"],"p_note"?: string,"p_paid_on": string }; Returns: {
-              "created_at": string | null,
+{ Args: { "p_account": string,"p_amount": number,"p_entry": string,"p_id": string,"p_mode"?: Database["public"]['Enums']["pay_mode"],"p_note"?: string,"p_paid_on": string,"p_target_seq"?: number }; Returns: {
+              "category_id": string | null,
+"created_at": string | null,
 "direction": Database["public"]['Enums']["entry_dir"],
 "down_payment_paise": number | null,
 "due_date": string | null,
@@ -531,7 +668,8 @@ isOneToOne: false
                            },
 "update_entry":
 { Args: { "p_id": string,"p_patch": Json }; Returns: {
-              "created_at": string | null,
+              "category_id": string | null,
+"created_at": string | null,
 "direction": Database["public"]['Enums']["entry_dir"],
 "down_payment_paise": number | null,
 "due_date": string | null,
