@@ -29,8 +29,12 @@ export default function RemindersScreen() {
 
   const refresh = () => void deviceStatus().then(setDevice)
   useEffect(refresh, [])
-  if (profile && form === null) setForm(formFromProfile(profile))
-  const set = <K extends keyof ReminderForm>(k: K, v: ReminderForm[K]) => setForm((f) => (f ? { ...f, [k]: v } : f))
+  // The form follows the saved profile until the user starts editing: the cached profile can be stale at first and fresh data arrives a moment later.
+  const [dirty, setDirty] = useState(false)
+  const [syncedFrom, setSyncedFrom] = useState<string | null>(null)
+  const profileSig = profile ? JSON.stringify(formFromProfile(profile)) : null
+  if (profile && profileSig !== syncedFrom && !dirty) { setSyncedFrom(profileSig); setForm(formFromProfile(profile)) }
+  const set = <K extends keyof ReminderForm>(k: K, v: ReminderForm[K]) => { setDirty(true); setForm((f) => (f ? { ...f, [k]: v } : f)) }
 
   const enable = async () => {
     setBusy(true); setMessage(null)
@@ -65,6 +69,7 @@ export default function RemindersScreen() {
     if (Object.keys(e).length) return
     try {
       await save.mutateAsync(profilePatch(form))
+      setDirty(false)
       toast().show({ message: 'Reminder settings saved' })
     } catch (err) {
       setErrors({ form: (err as Error).message })

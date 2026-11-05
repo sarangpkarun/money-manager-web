@@ -9,6 +9,8 @@ export function useProfile() {
   return useQuery({
     queryKey: ['profile', uid],
     enabled: !!uid,
+    // settings change often and other screens (reminders, display) depend on them: always revalidate after the cached copy paints
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', uid!).single()
       if (error) throw error

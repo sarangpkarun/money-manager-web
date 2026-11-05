@@ -42,6 +42,11 @@ const bytesToB64u = (buf: ArrayBuffer | null): string => {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
+/** The service worker registration, or null if none becomes ready in time (e.g. the dev server registers none). */
+async function readyWorker(ms = 4000): Promise<ServiceWorkerRegistration | null> {
+  return Promise.race([navigator.serviceWorker.ready, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))])
+}
+
 export const vapidPublicKey = (): string => (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? ''
 
 export interface DeviceStatus {
@@ -56,7 +61,7 @@ export async function deviceStatus(env: Env = readEnv()): Promise<DeviceStatus> 
   const support = pushSupport(env)
   if (support !== 'ok') return { support, permission: 'unavailable', subscribed: false, endpoint: null }
   let sub: PushSubscription | null = null
-  try { sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription() } catch { /* no service worker yet */ }
+  try { sub = (await (await readyWorker())?.pushManager.getSubscription()) ?? null } catch { /* no service worker yet */ }
   return { support, permission: Notification.permission, subscribed: !!sub, endpoint: sub?.endpoint ?? null }
 }
 
@@ -76,7 +81,8 @@ export async function enablePush(save: (s: { endpoint: string; keys: { p256dh: s
   try {
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') return { ok: false, reason: 'denied' }
-    const reg = await navigator.serviceWorker.ready
+    const reg = await readyWorker()
+    if (!reg) return { ok: false, reason: 'failed', message: 'The app is not ready for notifications yet. Reload it and try again.' }
     const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(key) }))
     const keys = { p256dh: bytesToB64u(sub.getKey('p256dh')), auth: bytesToB64u(sub.getKey('auth')) }
     try {
@@ -95,7 +101,7 @@ export async function enablePush(save: (s: { endpoint: string; keys: { p256dh: s
 export async function disablePush(remove: (endpoint: string) => Promise<void>, env: Env = readEnv()): Promise<void> {
   if (pushSupport(env) !== 'ok') return
   try {
-    const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription()
+    const sub = (await (await readyWorker())?.pushManager.getSubscription()) ?? null
     if (!sub) return
     await remove(sub.endpoint).catch(() => undefined)
     await sub.unsubscribe().catch(() => false)

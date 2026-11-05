@@ -16,10 +16,14 @@ pnpm dev                # http://localhost:5173  (auth emails: http://127.0.0.1:
 
 Try the list at scale: `pnpm seed:perf` (local only) creates `perf@test.local` / `Passw0rd!perf` with 5,000 transactions.
 
-## Push spike (Phase 0)
-1. `pnpm push:test keys`, set `VITE_VAPID_PUBLIC_KEY` for the deploy.
-2. Install the deployed app to the iPhone Home Screen, tap **Enable test push**, copy the JSON.
-3. `VAPID_PUBLIC=… VAPID_PRIVATE=… pnpm push:test send '<json>'`
+## Reminders (Phase 7)
+Rules (due tomorrow / today / overdue, quiet hours, manual note reminders, summaries) live in SQL (`claim_due_reminders`); the Edge Function `send-reminders` only sends what that returns, and `pg_cron` calls it every 5 minutes. Each reminder is claimed in `reminder_log` first, so it can only be sent once.
+1. Make VAPID keys: `pnpm push:test keys`. Put the **public** key in `VITE_VAPID_PUBLIC_KEY` (Vercel and `.env.local`).
+2. Give the functions the keys: `supabase secrets set VAPID_PUBLIC_KEY=… VAPID_PRIVATE_KEY=… VAPID_SUBJECT=mailto:you@example.com`.
+3. `supabase db push` then `supabase functions deploy send-reminders send-test` (`send-reminders` is deployed without JWT verification; it checks a secret that the database generates for itself, see `supabase/config.toml`).
+4. On the iPhone: install the app to the Home Screen, open it from there, Settings, Reminders, **Turn on notifications**, then **Send a test**.
+5. Local development: the local cron tick is switched off by `supabase/seed.sql`, so nothing calls the cloud function from your machine.
+6. Watching it: unsent claims older than the 10-minute lease mean a failed send, `select * from reminder_log where sent_at is null and claimed_at < now() - interval '15 minutes'`; the Edge Function logs one JSON line per run (claimed, sent, failed, pruned, released). If `pg_cron`/`pg_net` are unavailable on your plan, call `send-reminders` from any external scheduler with the header `x-cron-secret` (read it with `select secret from private.cron_secret` as the database owner).
 
 ## Deploy
 Vercel (SPA rewrites in `vercel.json`) + a Supabase project: `supabase link --project-ref <ref> && supabase db push`.

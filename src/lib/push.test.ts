@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { b64uToBytes, disablePush, enablePush, pushSupport, readEnv } from './push'
+import { b64uToBytes, deviceStatus, disablePush, enablePush, pushSupport, readEnv } from './push'
 
 const env = (o: Partial<ReturnType<typeof readEnv>> = {}) => ({
   hasServiceWorker: true, hasPushManager: true, hasNotification: true, ua: 'Mozilla/5.0 (Macintosh)', standalone: false, ...o,
@@ -115,3 +115,41 @@ describe('disablePush', () => {
     expect(remove).not.toHaveBeenCalled()
   })
 })
+
+describe('when no service worker ever becomes ready (for example the dev server)', () => {
+  const never = () => {
+    vi.stubGlobal('navigator', { serviceWorker: { ready: new Promise(() => undefined) }, userAgent: 'TestBrowser' })
+    vi.stubGlobal('Notification', { permission: 'default', requestPermission: async () => 'granted' })
+  }
+  it('deviceStatus gives up after a few seconds and reports "not subscribed" instead of hanging', async () => {
+    vi.useFakeTimers()
+    never()
+    const p = deviceStatus(env())
+    await vi.advanceTimersByTimeAsync(4100)
+    expect(await p).toEqual({ support: 'ok', permission: 'default', subscribed: false, endpoint: null })
+    vi.useRealTimers()
+  })
+  it('enablePush says to reload; disablePush does nothing', async () => {
+    vi.useFakeTimers()
+    vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'AQID')
+    never()
+    const p = enablePush(vi.fn(), env())
+    await vi.advanceTimersByTimeAsync(4100)
+    expect(await p).toMatchObject({ ok: false, reason: 'failed', message: expect.stringContaining('Reload') })
+    const remove = vi.fn()
+    const q = disablePush(remove, env())
+    await vi.advanceTimersByTimeAsync(4100)
+    await q
+    expect(remove).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+  it('deviceStatus reports unsupported environments without touching the worker', async () => {
+    expect(await deviceStatus(env({ hasPushManager: false }))).toEqual({ support: 'unsupported', permission: 'unavailable', subscribed: false, endpoint: null })
+    expect(await deviceStatus(env({ ua: IPHONE }))).toMatchObject({ support: 'needs-install' })
+  })
+  it('deviceStatus reads an existing subscription and the permission', async () => {
+    fakePush({ existing: true })
+    expect(await deviceStatus(env())).toEqual({ support: 'ok', permission: 'default', subscribed: true, endpoint: 'https://push.example/abc' })
+  })
+})
+

@@ -210,3 +210,21 @@ describe('Settings form', () => {
     await waitFor(() => expect(screen.getByLabelText('Time')).toHaveValue('19:00'))
   })
 })
+
+describe('a stale cached profile', () => {
+  it('is replaced by the fresh one while the form is untouched, but never over the user\'s edits', async () => {
+    const user = userEvent.setup()
+    const view = ui()
+    expect(await screen.findByLabelText('Reminder time')).toHaveValue('09:00')
+    m.profile = { ...(m.profile as object), alarm_time: '07:30:00' }
+    view.rerender(<MemoryRouter><RemindersScreen /></MemoryRouter>)
+    await waitFor(() => expect(screen.getByLabelText('Reminder time')).toHaveValue('07:30'))
+    fireEvent.change(screen.getByLabelText('Reminder time'), { target: { value: '12:00' } })
+    m.profile = { ...(m.profile as object), alarm_time: '05:00:00' }
+    view.rerender(<MemoryRouter><RemindersScreen /></MemoryRouter>)
+    expect(screen.getByLabelText('Reminder time')).toHaveValue('12:00') // the edit wins
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(m.save.mock.calls[0]![0]).toMatchObject({ alarm_time: '12:00' })
+  })
+})
+
