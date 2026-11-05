@@ -7,7 +7,7 @@ const d = (o: Partial<FilterDraft>): FilterDraft => ({ ...empty, ...o })
 
 describe('filtersToDraft', () => {
   it('an empty filter set is an empty draft', () => {
-    expect(empty).toEqual({ preset: '', from: '', to: '', kinds: [], accounts: [], categories: [], min: '', max: '', place: '', tag: '' })
+    expect(empty).toEqual({ preset: '', from: '', to: '', kinds: [], accounts: [], categories: [], min: '', max: '', place: '', tag: '', othersPending: false })
   })
   it('shows amounts in rupees', () => {
     expect(filtersToDraft({ min: 150_000, max: 99_950 })).toMatchObject({ min: '1500', max: '999.5' })
@@ -45,5 +45,14 @@ describe('draftToFilters', () => {
   it('trims place and normalises the tag', () => {
     expect(draftToFilters(d({ place: '  Cafe ', tag: ' #Work ' }))).toEqual({ ok: true, filters: { place: 'Cafe', tag: 'work' } })
     expect(draftToFilters(d({ place: '  ', tag: '' }))).toEqual({ ok: true, filters: {} })
+  })
+})
+
+describe('othersPending', () => {
+  it('goes to the draft and back', () => {
+    expect(filtersToDraft({ others: 'pending' }).othersPending).toBe(true)
+    const r = draftToFilters({ ...filtersToDraft({}), othersPending: true })
+    expect(r).toEqual({ ok: true, filters: { others: 'pending' } })
+    expect(draftToFilters(filtersToDraft({}))).toEqual({ ok: true, filters: {} })
   })
 })

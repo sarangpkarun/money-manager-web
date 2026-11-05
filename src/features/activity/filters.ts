@@ -20,6 +20,8 @@ export interface ActivityFilters {
   q?: string
   place?: string
   tag?: string
+  /** only purchases where a friend still owes something */
+  others?: 'pending'
 }
 
 // Plain validators rather than zod: this file is on Home's path and zod would add ~50 KB gz to the initial bundle.
@@ -34,6 +36,7 @@ const uuidList = list<string>((x) => UUID.test(x))
 const text: Parser<string> = (v) => { const t = v.trim(); return t.length >= 1 && t.length <= 100 ? t : undefined }
 const paise: Parser<number> = (v) => (/^\d{1,15}$/.test(v) ? Number(v) : undefined)
 const date: Parser<string> = (v) => (isValidDate(v) ? v : undefined)
+const othersP: Parser<'pending'> = (v) => (v === 'pending' ? 'pending' : undefined)
 const presetP: Parser<DatePreset> = (v) => ((DATE_PRESETS as readonly string[]).includes(v) ? (v as DatePreset) : undefined)
 
 /** Reads filters from the URL; anything invalid is dropped rather than failing. */
@@ -54,6 +57,7 @@ export function parseFilters(sp: URLSearchParams): ActivityFilters {
     q: pick('q', text),
     place: pick('place', text),
     tag: pick('tag', text),
+    others: pick('others', othersP),
   }
   if (out.preset !== 'custom') {
     delete out.from
@@ -77,6 +81,7 @@ export function serializeFilters(f: ActivityFilters): URLSearchParams {
   if (f.q) sp.set('q', f.q)
   if (f.place) sp.set('place', f.place)
   if (f.tag) sp.set('tag', f.tag)
+  if (f.others) sp.set('others', f.others)
   return sp
 }
 
@@ -115,11 +120,12 @@ export function toRpcFilters(f: ActivityFilters, today: DateStr, month: string, 
   if (f.q) out.q = f.q
   if (f.place) out.place = f.place
   if (f.tag) out.tag = f.tag
+  if (f.others) out.others = f.others
   return out
 }
 
 /** Number shown on the filter badge (search text is not counted: it has its own box). */
 export function activeFilterCount(f: ActivityFilters): number {
-  return [f.preset, f.kinds?.length, f.accounts?.length, f.categories?.length, f.min !== undefined || f.max !== undefined, f.place, f.tag]
+  return [f.preset, f.kinds?.length, f.accounts?.length, f.categories?.length, f.min !== undefined || f.max !== undefined, f.place, f.tag, f.others]
     .filter(Boolean).length
 }

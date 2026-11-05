@@ -98,3 +98,18 @@ describe('activeFilterCount', () => {
     expect(activeFilterCount({ preset: 'today', kinds: ['spend'], accounts: [A], categories: [B], min: 1, max: 2, place: 'p', tag: 't' })).toBe(7)
   })
 })
+
+describe('others=pending (paid for others, not returned yet)', () => {
+  it('round-trips through the URL and is dropped when invalid', () => {
+    const f = parseFilters(new URLSearchParams('others=pending'))
+    expect(f).toEqual({ others: 'pending' })
+    expect(serializeFilters(f).toString()).toBe('others=pending')
+    expect(parseFilters(new URLSearchParams('others=all'))).toEqual({})
+  })
+  it('is sent to the RPC and counted in the badge', () => {
+    expect(toRpcFilters({ others: 'pending' }, '2026-11-05', '2026-11')).toMatchObject({ others: 'pending' })
+    expect(activeFilterCount({ others: 'pending' })).toBe(1)
+    expect(activeFilterCount({ others: 'pending', place: 'p' })).toBe(2)
+  })
+})
+

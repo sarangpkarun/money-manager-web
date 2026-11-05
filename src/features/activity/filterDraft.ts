@@ -14,12 +14,14 @@ export interface FilterDraft {
   max: string
   place: string
   tag: string
+  /** only purchases where a friend still owes something */
+  othersPending: boolean
 }
 
 export function filtersToDraft(f: ActivityFilters): FilterDraft {
   return {
     preset: f.preset ?? '', from: f.from ?? '', to: f.to ?? '', kinds: f.kinds ?? [], accounts: f.accounts ?? [], categories: f.categories ?? [],
-    min: f.min !== undefined ? toRupeeInput(f.min) : '', max: f.max !== undefined ? toRupeeInput(f.max) : '', place: f.place ?? '', tag: f.tag ?? '',
+    min: f.min !== undefined ? toRupeeInput(f.min) : '', max: f.max !== undefined ? toRupeeInput(f.max) : '', place: f.place ?? '', tag: f.tag ?? '', othersPending: f.others === 'pending',
   }
 }
 
@@ -56,6 +58,7 @@ export function draftToFilters(d: FilterDraft, keepQ?: string): DraftResult {
   if (d.categories.length) f.categories = d.categories
   if (d.place.trim()) f.place = d.place.trim()
   if (d.tag.trim()) f.tag = d.tag.trim().replace(/^#/, '').toLowerCase()
+  if (d.othersPending) f.others = 'pending'
   if (keepQ) f.q = keepQ
 
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, filters: f }

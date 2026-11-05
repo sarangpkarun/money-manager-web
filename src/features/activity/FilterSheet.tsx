@@ -89,6 +89,10 @@ export function FilterSheet({ filters, accounts, categories, hideDate = false, o
           <Field label="Min amount (₹)" error={errors.min}><input className={inputCls} inputMode="decimal" value={draft.min} onChange={(e) => set('min', e.target.value)} /></Field>
           <Field label="Max amount (₹)" error={errors.max}><input className={inputCls} inputMode="decimal" value={draft.max} onChange={(e) => set('max', e.target.value)} /></Field>
         </div>
+        <Group title="Friends">
+          <Chip selected={draft.othersPending} onClick={() => set('othersPending', !draft.othersPending)}>Paid for others, not returned yet</Chip>
+        </Group>
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Place"><input className={inputCls} value={draft.place} onChange={(e) => set('place', e.target.value)} autoComplete="off" /></Field>
           <Field label="Tag"><input className={inputCls} value={draft.tag} onChange={(e) => set('tag', e.target.value)} autoComplete="off" /></Field>
