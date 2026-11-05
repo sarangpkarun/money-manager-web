@@ -1,0 +1,27 @@
+import { QueryClient } from '@tanstack/react-query'
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
+import { del, get, set } from 'idb-keyval'
+
+const DAY = 1000 * 60 * 60 * 24
+
+export const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 30_000, gcTime: 7 * DAY, retry: 1, refetchOnWindowFocus: true } },
+})
+
+export const persister = createAsyncStoragePersister({
+  storage: {
+    getItem: async (k) => (await get<string>(k)) ?? null,
+    setItem: (k, v) => set(k, v),
+    removeItem: (k) => del(k),
+  },
+  key: 'mm-query-cache',
+  throttleTime: 1000,
+})
+
+/** Bump when persisted shapes change so old caches are discarded. */
+export const CACHE_BUSTER = 'v0'
+
+export async function clearCache() {
+  queryClient.clear()
+  await persister.removeClient()
+}

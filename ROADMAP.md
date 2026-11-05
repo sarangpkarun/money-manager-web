@@ -1,0 +1,387 @@
+# Money Manager v2: Delivery Roadmap
+
+> Execution plan for the spec "Money Manager v2" (React PWA + Supabase).
+> Each phase has a goal, tasks, deliverables, exit criteria (testable) and risks.
+> Estimates assume **one full-time developer**; halve the calendar time for two.
+
+---
+
+## 0. Summary
+
+| Phase | Name | Est. | Exit gate |
+|---|---|---|---|
+| 0 | Foundations and setup | 1 wk | Installs on iPhone, signs in, RLS verified |
+| 1 | Money maths library (pure TS) | 1 wk | All Vitest suites green |
+| 2 | Accounts, categories, Quick Add (basic), Activity | 2 wk | Scenario E passes; 5,000 rows smooth |
+| 3 | Dashboard v1 (one RPC) | 1.5 wk | Home from cache < 100 ms |
+| 4 | People, entries, payments, Money tab | 2 wk | Lend, part-pay, settle works |
+| 5 | Plans, EMI, early/late logic, Calendar | 3 wk | Scenarios B, C, D pass |
+| 6 | On-behalf link and card tracking | 1.5 wk | Scenario A passes |
+| 7 | Reminders (Web Push), summaries, Settings | 2 wk | Push arrives on installed iPhone PWA |
+| 8 | Insights, export/import, polish, a11y, perf | 2 wk | Quality checklist and budgets met |
+| 9 | Beta, launch, migration | 1 wk | Own data migrated, daily use |
+| 10 | v1.1 features | 4 to 6 wk | Per-feature criteria below |
+
+**Total to v1 launch: about 17 weeks solo (about 9 to 10 with two people).**
+Critical path: Phase 1 → 4 → 5 → 6 → 7. Dashboard (3) and Activity (2) can overlap with Phase 1 and 4 if there are two developers.
+
+---
+
+## 1. Decisions to lock before coding
+
+Defaults from spec section 13 are accepted unless changed here. Review these on day 1.
+
+| # | Decision | Default | Revisit when |
+|---|---|---|---|
+| Q1 | iOS reminders | PWA + Web Push | Push is unreliable in Phase 7 testing (then plan Capacitor, $99/yr) |
+| Q2 | Users | Single-user, no sharing | Never in v1 |
+| Q3 | Currency | INR only, per-account currency field not used | Later |
+| Q4 | Interest | None / Flat / Simple (EMI: reducing + no-cost) | Compound only if used |
+| Q5 | Card bills | Outstanding, utilisation, due date | Statement view in v1.1 |
+| Q6 | For-others spend | Excluded from personal spend | Never |
+| Q7 | Summary notifications | Off by default | Phase 7 |
+| Q8 | Seed categories | Per spec | Phase 2 |
+
+Other decisions to make now:
+- **Router:** pick TanStack Router *or* React Router (recommend React Router for simplicity, lazy routes).
+- **Charts:** hand-rolled SVG for donut, bars, sparkline (no chart library).
+- **Hosting:** Vercel or Cloudflare Pages (one staging + one production Supabase project).
+- **Migrations:** Supabase CLI, SQL migrations committed in `/supabase/migrations`.
+- **Testing of RPCs:** pgTAP or SQL-level tests run against a local Supabase (`supabase start`).
+- **Type generation:** `supabase gen types typescript` committed and checked in CI.
+
+---
+
+## 2. Phase 0: Foundations (Week 1)
+
+**Goal:** an empty but installable, authenticated, deployed app with secure data access.
+
+Tasks
+- [ ] Scaffold Vite + React 18 + TS (strict) + Tailwind; ESLint, Prettier, path aliases.
+- [ ] Folder structure per spec section 14.
+- [ ] Theme tokens as CSS variables (light, dark, system) including semantic colours (green, red, blue, amber, purple, grey).
+- [ ] PWA: `vite-plugin-pwa`, manifest, icons, Apple touch icon, splash colours, `black-translucent` status bar, `viewport-fit=cover`, safe-area utilities.
+- [ ] App shell: fixed bottom tab bar (5 tabs), `overscroll-behavior: none`, keep-alive tabs with preserved scroll, lazy routes.
+- [ ] Supabase: local dev (`supabase start`), staging and prod projects, env handling.
+- [ ] Migration 001: enums, all tables, indexes, RLS policies on **every** table, `profiles` auto-create trigger on signup.
+- [ ] Seed default categories on signup (trigger or RPC).
+- [ ] Auth: email + password sign-up, email verification gate, login, forgot password, persistent session.
+- [ ] TanStack Query provider with IndexedDB persistence (`idb-keyval`); Zustand store for UI state.
+- [ ] CI: typecheck, lint, Vitest, build, bundle-size check (fail above 200 KB gz), Supabase types drift check.
+- [ ] Deploy to Vercel/Cloudflare with preview deployments.
+
+Exit criteria
+- Add to Home Screen on a real iPhone, opens standalone, signs in, stays signed in after app restart.
+- RLS test: user B cannot read/insert/update user A rows on any table (automated test).
+- Unverified email cannot access data.
+
+Risks: iOS PWA quirks (safe areas, keyboard). Test on a real device from day 1, not only the simulator.
+
+---
+
+## 3. Phase 1: Money maths library (Week 2)
+
+**Goal:** correct, tested pure functions before any UI depends on them. These are mirrored later in SQL.
+
+`/src/lib/money.ts`
+- [ ] Paise <-> rupees parsing/formatting; Indian (12,34,567) and Western grouping; whole rupees unless paise non-zero.
+- [ ] Safe amount expression parser ("450+120"), no `eval`.
+
+`/src/lib/schedule.ts`
+- [ ] Equal split with **last row absorbing rounding**.
+- [ ] Month-end clamping (31 Jan, 28/29 Feb, 31 Mar); weekly (+7 days); custom dates.
+- [ ] Flat and Simple interest (days/365).
+- [ ] Reducing-balance EMI: `P·r·(1+r)^n / ((1+r)^n − 1)` in integer paise; no-cost EMI (interest 0 for the user).
+- [ ] Per-row principal/interest split.
+- [ ] Re-spread: change amount, skip month, extra payment (shrinks from the last row).
+- [ ] Payment allocation: chosen row or earliest unpaid; overpayment blocked.
+- [ ] Row label derivation (early N days, on time, late N days, overdue partial, overdue N days, upcoming).
+- [ ] Prepay/foreclose estimate.
+
+Tests (Vitest, property-based where useful with `fast-check`)
+- Sum of schedule rows always equals `total_payable_paise`.
+- No negative or zero rows; dates strictly increasing; clamped dates correct across leap years.
+- Spec scenarios B, C, D expressed as unit-level fixtures.
+
+Exit criteria: 100% of functions in the above list covered; coverage ≥ 95% on `/lib`.
+
+---
+
+## 4. Phase 2: Accounts, categories, Quick Add, Activity (Weeks 3 to 4)
+
+**Goal:** the expense tracker works end to end and is fast.
+
+Tasks
+- [ ] Design-system primitives in `/ui`: Button, Sheet (vaul), Chip, Amount, SwipeRow, Skeleton, EmptyState, Toast with Undo.
+- [ ] Accounts CRUD (cash, bank, UPI, credit card with limit, statement day, due day, wallet); archive; reorder.
+- [ ] Account balance view (SQL) incl. credit card outstanding and utilisation.
+- [ ] Categories CRUD with icon/colour, reorder, archive.
+- [ ] **Quick Add v1:** Spent / Received / Transfer, custom keypad focus, title autocomplete from history (suggests category/account/place), category chips with recents first, account + date chips, last-used defaults, amount maths.
+- [ ] `quick_add_transaction` RPC (txn only for now) with optimistic client update.
+- [ ] After-save toast: Undo and Add another.
+- [ ] Activity list: virtualised, sticky day headers with day totals, month total strip, per-account chips, swipe edit/delete with Undo, detail sheet with button equivalents.
+- [ ] Search (title, place, notes, account, category, tags) using Postgres trigram/`ilike` with index.
+- [ ] **Reusable Filter sheet** (date, type, account, category, amount, place/tag) with state in the URL query.
+- [ ] Credit-card bill payment as a transfer (Bank → Card).
+- [ ] Empty states with a single action; skeletons instead of spinners.
+
+Exit criteria
+- Scenario E: open → + → 120 → Food → Save, ≤ 4 taps.
+- Seed 5,000 transactions; Activity scrolls at 60fps on a mid iPhone; search < 300 ms.
+- Balances correct for income, expense, transfer, card outstanding (unit + SQL tests).
+
+Risks: keypad + iOS keyboard behaviour in sheets; test 16px inputs, no zoom.
+
+---
+
+## 5. Phase 3: Dashboard v1 (Weeks 5 to 6)
+
+**Goal:** Home renders from one RPC and is instant from cache.
+
+Tasks
+- [ ] `dashboard_summary(p_month, p_today, p_filters)` returning JSON: month totals (spent, income, saved, vs last month), daily series, category/account/place breakdown, recent 5, accounts and cards.
+- [ ] Month switcher + global filter icon; filters apply to every card.
+- [ ] SVG components: Donut, Sparkline with average line, Bars.
+- [ ] Cards in this phase: This month (with projection), Where it went (toggle category/account/place), Cards, Recent activity.
+- [ ] Card drill-downs → Activity with filters pre-applied.
+- [ ] Stale-while-revalidate: persisted cache hydrate on launch, background refresh.
+- [ ] Card hide/reorder stored in `profiles.dashboard_layout` (UI in Phase 7).
+- [ ] Placeholder slots for cards delivered later (Net position, Due soon, People, EMI load, Insights).
+
+Exit criteria
+- Cold open from persisted cache paints in < 100 ms; one network call only.
+- RPC returns in < 150 ms on 5,000 transactions (EXPLAIN checked, indexes used).
+- Numbers reconcile with Activity totals (automated cross-check test).
+
+---
+
+## 6. Phase 4: People, entries, payments, Money tab (Weeks 7 to 8)
+
+**Goal:** lend / borrow with part payments, correct balances, no plans yet.
+
+Tasks
+- [ ] People CRUD, autocomplete, "add new" inline, archive, search.
+- [ ] Entries: `lent`, `borrowed` (single-date, optional due date, back-dated start, simple/flat interest to date).
+- [ ] `create_entry_with_plan` (single-row variant first), `record_payment`, `delete_payment`, `mark_unpaid`.
+- [ ] Auto-create linked `debt_out` / `debt_in` transactions so account balances stay correct; excluded from spend.
+- [ ] Quick Add: **Lent** and **Borrowed** types (person required, due date).
+- [ ] Money tab: They owe me / I owe grouped by person, summary card with overdue; People tab with net per person, filters and sorts; History tab (settled).
+- [ ] Entry detail screen: progress bar, payments list, receive/pay, mark as unpaid, notes.
+- [ ] Status labels (Pending / Partial / Overdue / Paid) consistent everywhere.
+- [ ] Dashboard cards: Net position, Money with people (with ageing buckets).
+- [ ] Duplicate-people detection + `merge_people`.
+- [ ] Paste / CSV people import.
+
+Exit criteria
+- Lend ₹10,000 → part pay ₹4,000 → settle ₹6,000; balances, statuses, History, and account balances correct.
+- Overpayment blocked; deleting a payment reverses its transaction.
+- All RPCs are atomic (tested with forced mid-failure).
+
+---
+
+## 7. Phase 5: Plans, EMI, early/late logic, Calendar (Weeks 9 to 11)
+
+**Goal:** schedules and the calendar, the highest-complexity phase.
+
+Tasks (plans)
+- [ ] `create_entry_with_plan`: equal, by monthly amount, weekly, custom, reducing EMI, no-cost EMI (with down payment).
+- [ ] Mirror TS schedule maths in SQL; add **golden-file tests** asserting TS and SQL produce identical rows for a table of cases.
+- [ ] Quick Add chip **EMI / instalments** with live preview (monthly amount, total interest, last date).
+- [ ] Entry types: `emi_purchase` (party name, product), `instalment`.
+- [ ] Plan row UI: mark paid, pay in any order, change amount, skip month, extra payment, prepay/foreclose estimate (`prepay_estimate`).
+- [ ] RPCs: `plan_skip_month`, `plan_change_amount`, `plan_extra_payment`.
+- [ ] `paid_on` set when a row completes; derived early/on-time/late labels everywhere.
+- [ ] Dashboard cards: Due soon (with Pay), EMI & loan load (12-month bars, debt-free date).
+
+Tasks (calendar)
+- [ ] `calendar_month(p_month, p_today, p_filters)` RPC: per-day markers + totals.
+- [ ] Month grid with up to 3 dots/day, optional day spend, totals strip (Spent, Received, Dues).
+- [ ] Marker set per spec: red, amber, green ✓, **blue ✓ on both due and paid dates**, amber ✓ late, grey, purple.
+- [ ] Layer chips: Dues, Spending, Notes. Month | Agenda switch; agenda infinite scroll with Today anchor.
+- [ ] Day sheet: Due, Paid today (with badge + original due date), Spending & income, Notes & tasks; `+` adds with date pre-filled.
+- [ ] Notes/tasks CRUD (`notes` table), checkbox done, repeat rule parsing.
+
+Exit criteria
+- Scenario B (borrow ₹50,000, 10 instalments, #2 paid early: blue ✓ on both dates, removed from Due soon).
+- Scenario C (₹60,000 EMI, ₹6,000 down, 9 months, no-cost, 9 rows, last row absorbs rounding, clamped dates).
+- Scenario D (weekly 4 × ₹500, pay row 3 first, one amber ✓ "2 days late").
+- Calendar month opens in < 150 ms from cache; day sheet opens instantly.
+
+Risks: SQL/TS divergence → mitigated by golden tests. Timezone: always use client `p_today`; never `now()` for business dates.
+
+---
+
+## 8. Phase 6: On-behalf link and card tracking (Weeks 12 to 13)
+
+**Goal:** "paid for someone else" works with full connection between purchase and debt.
+
+Tasks
+- [ ] Quick Add chip **For someone else**: multiple people, amount each (default full), partial support.
+- [ ] `quick_add_transaction` extended: creates `for_other_paise`, `on_behalf` entries per person with `source_txn_id`, optional plan per person, all atomic.
+- [ ] Personal spend = `amount − for_other` in every view (dashboard, activity totals, calendar, filters).
+- [ ] Activity row badge "₹X pending from Name" → opens entry; entry detail shows linked purchase card.
+- [ ] Editing/deleting the source txn updates or blocks with a clear message when payments exist.
+- [ ] Filter chip "Paid for others, not returned yet".
+- [ ] Dashboard: Cards card with "₹X to get back from friends"; card bill due date.
+- [ ] Remaining entry-detail features: linked purchase tap-through, reminder toggle.
+
+Exit criteria
+- Scenario A in full (₹30,000 on HDFC for Arun; spend +₹0; card outstanding +₹30,000; ₹10,000 UPI part-pay; ₹20,000 cash settles; badge disappears; History).
+- Partial case: ₹5,000 bill, ₹4,000 for friend → spend ₹1,000.
+- Split across 3 people reconciles to the txn amount.
+
+---
+
+## 9. Phase 7: Reminders, summaries, Settings (Weeks 14 to 15)
+
+**Goal:** the app tells you before you forget; Settings is complete but short.
+
+Tasks
+- [ ] Web Push: VAPID keys, service worker push handler, subscription flow (iOS requires installed PWA + user gesture), `push_subscriptions` table, unsubscribe on logout.
+- [ ] Edge Function `send-reminders` + `pg_cron` every 5 min: day-before, on-day, day-after at `alarm_time`; manual `notes.remind_at`; per-entry opt-out; dedupe table so nothing sends twice.
+- [ ] Quiet hours (automatic wait, manual ring on time).
+- [ ] Daily/weekly summary (off by default) with quiet-hours respect.
+- [ ] Notification deep links (tap → entry or day sheet).
+- [ ] Settings: Profile, Accounts, Categories, Display (number/date format, theme, dashboard cards reorder/hide), Reminders, Export, Import, Privacy, About, Log out, Delete account.
+- [ ] Delete account: cascade all tables + storage, then auth user (Edge Function with service role).
+- [ ] Remind-me chip in Quick Add.
+
+Exit criteria
+- Push arrives on an installed iPhone PWA for: due tomorrow, due today, overdue, manual note, summary.
+- Quiet hours behave as specified; duplicate sends = 0 over a 7-day soak.
+- **Go/no-go on Q1:** if delivery is unreliable, schedule the Capacitor wrapper as a separate track (Section 12).
+
+Risks: iOS push is best-effort; Safari permission prompts; service role key must only live in Edge Functions.
+
+---
+
+## 10. Phase 8: Insights, export/import, polish (Weeks 16 to 17)
+
+**Goal:** finish v1 to the quality bar.
+
+Tasks
+- [ ] Insights engine (rule-based, SQL/TS) implementing rules 1 to 8 (rule 7 only when budgets exist), cap at 5, ranked by importance, each tappable to a filtered list.
+- [ ] Export: JSON full backup + CSV of transactions.
+- [ ] `import_backup(json)` for the old Firebase v1 export (people, entries + payments, reminders → notes); dry-run preview and error report; idempotent.
+- [ ] Dark mode audit; contrast ≥ 4.5:1.
+- [ ] Accessibility: labels, focus order in sheets, swipe actions mirrored as buttons, reduced-motion support.
+- [ ] Animation pass (transform/opacity only, 60fps).
+- [ ] Empty states for every screen; error states with retry; offline shell with "offline" banner.
+- [ ] Performance pass: bundle analysis (≤ 200 KB gz initial), lazy images, query tuning, Lighthouse.
+- [ ] Playwright suites for scenarios A to E.
+
+Exit criteria
+- Full quality checklist (spec section 11) ticked.
+- Lighthouse PWA + Performance ≥ 90 on mid-phone profile.
+- Old backup imports with totals matching the source.
+
+---
+
+## 11. Phase 9: Beta, launch, migration (Week 18)
+
+- [ ] Production Supabase: backups on, PITR if on paid plan, auth email templates, SMTP provider set up (the default Supabase mail is rate limited).
+- [ ] Privacy review: RLS audit, storage bucket policy, no service-role key in client bundle (CI grep), no trackers.
+- [ ] Error monitoring (Sentry, with PII scrubbed) and basic uptime check.
+- [ ] Migrate real data from the old app; reconcile balances manually for one month.
+- [ ] 2 weeks of daily dogfooding; log issues in a single list; fix P0/P1.
+- [ ] Documentation: README, runbook (deploy, rollback, restore backup), env var list.
+
+Exit criteria: two consecutive weeks of daily use with no data errors and no missed reminders.
+
+---
+
+## 12. Phase 10: v1.1 backlog (after launch, priority order)
+
+| # | Feature | Notes / acceptance |
+|---|---|---|
+| 1 | **Budgets** | Overall + per category, dashboard progress, enables insight 7 |
+| 2 | **Recurring transactions** | Rent, subscriptions, salary; auto-post or confirm prompt; `pg_cron` generator |
+| 3 | **Offline write queue** | Add expenses offline, sync in order, conflict-safe (idempotency keys) |
+| 4 | **Receipt photo** | Compress client-side, private Storage bucket (≤ 10 MB), lazy thumbnails |
+| 5 | **Smart text add** | Regex parser ("chai 40 upi"), unit-tested, no AI |
+| 6 | **Credit card statement view** | Group by statement cycle, bill estimate |
+| 7 | **CSV bank-statement import** | Mapping UI, duplicate detection |
+| 8 | **Saved filters** | Named, stored per user |
+| 9 | Share image of "this month" | Canvas render |
+
+**Conditional track: Capacitor wrapper**
+Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, local notifications scheduled from the schedule table, TestFlight, Apple Developer account ($99/yr). Est. 2 to 3 weeks.
+
+**Later / only if needed:** multi-currency, net-worth chart, bill-splitting groups, shared ledgers, Siri shortcut.
+
+---
+
+## 13. Cross-cutting workstreams (run through all phases)
+
+| Stream | Practice |
+|---|---|
+| **Testing** | Vitest for `/lib`; SQL tests for RPCs; Playwright for scenarios A to E (added as each phase lands); RLS isolation test in CI |
+| **Data integrity** | Integer paise only; `date` not timestamps; client-passed `p_today`; every multi-write is one RPC; idempotency keys for retried writes |
+| **Performance** | Bundle budget in CI; RPC timings tracked on seeded 5k/50k datasets; no layout-animating CSS |
+| **Security** | RLS on every new table in the same migration; no service-role key in client; storage policies; email verification enforced |
+| **Design/UX** | Semantic colour tokens only; 44px targets; 16px inputs; Undo over confirm dialogs |
+| **Device testing** | A real iPhone (notch + home bar), one older/mid iPhone, Safari and installed-PWA modes, light + dark |
+| **Migrations** | One forward-only migration per change; never edit applied ones; staging first |
+| **Docs** | Update spec/ADR notes when behaviour changes; keep a CHANGELOG |
+
+---
+
+## 14. Risk register
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| iOS Web Push unreliable / no loud alarm | High | High | Test early (Phase 0 spike: send a test push to an installed PWA); fallback plan = Capacitor |
+| TS and SQL schedule maths diverge | Medium | High | Golden-file tests, single source of truth for fixtures |
+| Rounding / month-end bugs in EMI | Medium | High | Property tests; Phase 1 built first |
+| Dashboard RPC slows with data growth | Medium | Medium | Indexes, `EXPLAIN` in CI on 50k rows, summary caching if needed |
+| iOS keyboard/safe-area layout glitches in sheets | High | Medium | Real-device testing every phase; `visualViewport` handling |
+| Scope creep (v1.1 items pulled in) | High | Medium | Strict v1 gate; backlog list in Section 12 only |
+| Email deliverability (verification, reset) | Medium | Medium | Custom SMTP in Phase 0, not Phase 9 |
+| Old-backup import mismatches | Medium | Medium | Dry-run preview, totals reconciliation, keep original file |
+| Single-developer bottleneck on Phase 5 | Medium | Medium | Cut Agenda view or prepay estimates first if late |
+
+---
+
+## 15. Milestones and review points
+
+| Milestone | End of | Demo |
+|---|---|---|
+| M1: "Installable and secure" | Phase 0 | Sign in on iPhone, RLS test green |
+| M2: "I can track expenses" | Phase 2 | Daily expense logging replaces the old app for spending |
+| M3: "Home tells me where I stand" | Phase 3 + 4 | Dashboard + lend/borrow flows |
+| M4: "Calendar and EMIs" | Phase 5 | Scenarios B, C, D |
+| M5: "Full feature parity + for-others" | Phase 6 | Scenario A |
+| M6: "Never miss a due date" | Phase 7 | Push on iPhone |
+| M7: **v1 release candidate** | Phase 8 | All scenarios + quality checklist |
+| M8: v1 launch | Phase 9 | Real data migrated |
+
+**Scope-cut order if time runs short** (cut from top):
+1. Agenda view (keep Month grid), 2. Place breakdown toggle, 3. Prepay/foreclose estimates, 4. Weekly summary, 5. Duplicate-merge UI, 6. Dashboard card reorder UI (keep fixed order), 7. Insight rules 6 and 8.
+
+**Never cut:** RLS, atomic RPCs, integer paise, Undo, 16px inputs, the early/late logic, the on-behalf link.
+
+---
+
+## 16. Definition of Done (every task)
+
+- [ ] Typed end to end; no `any` on money or date fields.
+- [ ] Unit/SQL tests added; relevant Playwright scenario updated.
+- [ ] RLS policy present for any new table.
+- [ ] Works in light + dark, on iPhone Safari and installed PWA.
+- [ ] No new spinner on navigation; optimistic where it is a write.
+- [ ] Bundle size within budget.
+- [ ] Empty, loading and error states handled.
+
+---
+
+## Phase 0 status (updated 2026-11-05)
+
+**Done and verified locally:** scaffold (Vite 8, TS 6 strict, Tailwind 4), theme tokens, app shell with keep-alive tabs, PWA (injectManifest + push handlers), schema + RLS on all 12 tables + verified-email gate (folded into migration 0001), signup trigger (profile + 17 categories), auth screens, persisted query cache, CI workflow. `pnpm test:rls` 51/51, unit 12/12, initial JS 146.9 KB gz. Real local flow verified: sign up → mail → verify → login → profile + categories seeded; login before verify is blocked.
+
+**Remaining (needs your accounts / a device):**
+- [ ] Create staging Supabase project, `supabase link` + `db push`, configure auth URLs + custom SMTP.
+- [ ] Create Vercel project, set env vars, deploy.
+- [ ] iPhone test: Add to Home Screen, safe areas, no input zoom, session survives force-quit.
+- [ ] Push spike on the installed iPhone PWA. Result: ______ (go / no-go for Phase 7, see Q1).
+
+**Notes:** Node 22 required (`.nvmrc`). TypeScript pinned to 6.x because typescript-eslint does not support 7 yet.
