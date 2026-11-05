@@ -25,6 +25,12 @@ Rules (due tomorrow / today / overdue, quiet hours, manual note reminders, summa
 5. Local development: the local cron tick is switched off by `supabase/seed.sql`, so nothing calls the cloud function from your machine.
 6. Watching it: unsent claims older than the 10-minute lease mean a failed send, `select * from reminder_log where sent_at is null and claimed_at < now() - interval '15 minutes'`; the Edge Function logs one JSON line per run (claimed, sent, failed, pruned, released). If `pg_cron`/`pg_net` are unavailable on your plan, call `send-reminders` from any external scheduler with the header `x-cron-secret` (read it with `select secret from private.cron_secret` as the database owner).
 
+## Settings, export and account deletion (Phase 7B)
+
+- Display choices (number format, date format, week start, Home cards) live in `profiles`; `lib/display.ts` holds the active number and date format and the Shell syncs it from the profile.
+- Export builds files in the browser (`lib/exportData.ts`); nothing is uploaded.
+- Delete account calls the `delete-account` Edge Function (`supabase functions deploy delete-account`). It needs no extra secrets: the Edge runtime supplies the service role.
+
 ## Deploy
 Vercel (SPA rewrites in `vercel.json`) + a Supabase project: `supabase link --project-ref <ref> && supabase db push`.
 Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; configure auth Site URL / redirect URLs and a custom SMTP provider.

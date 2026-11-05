@@ -497,4 +497,16 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 **Not done / needs you:**
 - [ ] `supabase db push` for `20260108000001_reminders.sql`, `supabase secrets set` (VAPID keys made locally, never shown to you) and `supabase functions deploy send-reminders send-test`: all cloud actions, only after you approve.
 - [ ] **The exit gate itself:** on your iPhone, install the app, turn notifications on, send a test, then check that due tomorrow, due today, overdue, a manual note and a summary each arrive, quiet hours behave, and run the 7-day duplicate check. Whether iOS delivery is reliable enough is the **Q1 go/no-go**; I cannot judge it from here.
-- [ ] Stage 7B (Settings suite: Profile, Display, dashboard card layout editor, Export, Privacy, About, Delete account).
+- [x] Stage 7B (Settings suite): see below.
+
+## Phase 7B status (updated 2026-11-06): Settings suite, Export, Delete account
+
+**Built and verified locally:** migration `20260109000001_profile_checks.sql` (CHECK constraints so a bad number format, date format, week start, summary mode, theme, currency, time zone or name can never be saved); Settings home grouped (You, Money, App, Data, Log out, Delete account); **Profile** (name, read-only email and INR, searchable time zone with "use this device's"); **Display** (number format Indian/Western applied to every amount through one default in `lib/display.ts`, four date formats applied through `formatDisplayDate`, week start, theme, Home card editor with up/down, hide and reset saved to `profiles.dashboard_layout`); **Export** (everything as JSON without push data, transactions as CSV with names and rupee amounts, formula-neutralised cells, paged reads, share sheet or download, all in the browser); **Privacy** and **About** (version and build date injected at build); **Delete account** (Edge Function `delete-account` checks the caller's token and deletes only that auth user, every table cascades; the screen needs the typed email plus a second confirmation, and only after the server confirms does it turn push off and sign out locally).
+
+**Numbers:** 762 unit/component tests, 223 SQL/RLS tests, 32 Playwright e2e tests (6 new for Settings), coverage 99.4% lines on `src/lib`. Initial JS 189.3 KB gz (budget 200). One e2e test failed once in a full run and passed in 8 repeats and a full rerun; no cause found, watch for it.
+
+**Known gaps:** plan preview rows still print ISO dates; Import is Phase 8; the local stack has no Edge runtime, so `delete-account` is only exercised locally through its pure handler and an e2e that stands in for it with the same admin call.
+
+**Not done / needs you:**
+- [ ] `supabase db push` for `20260109000001_profile_checks.sql` and `supabase functions deploy delete-account` (cloud actions, only after you approve), then a deletion check with a throwaway account on the deployed app.
+
