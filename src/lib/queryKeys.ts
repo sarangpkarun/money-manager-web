@@ -9,5 +9,11 @@ export const qk = {
   dashboardAll: ['dashboard'] as const,
   dashboard: (month: string, filters: unknown) => ['dashboard', month, filters] as const,
   recent: ['recent-txns'] as const,
+  people: ['people'] as const,
+  peopleBalances: ['people-balances'] as const,
+  money: ['money'] as const,
+  moneyOverview: (today: string) => ['money', 'overview', today] as const,
+  moneyHistory: ['money', 'history'] as const,
+  entry: (id: string) => ['money', 'entry', id] as const,
   suggestions: (prefix: string) => ['title-suggestions', prefix] as const,
 }

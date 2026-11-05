@@ -10,6 +10,7 @@ async function must<T>(p: PromiseLike<{ data: T; error: { message: string } | nu
   if (error) throw new Error(error.message)
   return data
 }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper: RPC results are checked field by field
 const rpc = (u: TestUser, fn: string, args: Record<string, unknown>) => u.client.rpc(fn as never, args as never) as unknown as PromiseLike<{ data: any; error: { message: string } | null }>
 const uid = () => crypto.randomUUID()
 
