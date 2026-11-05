@@ -43,7 +43,7 @@ function TabPane({ active, children }: { active: boolean; children: ReactNode })
       onScroll={(e) => {
         if (active) saved.current = e.currentTarget.scrollTop
       }}
-      className="absolute inset-0 overflow-y-auto overscroll-contain pt-safe"
+      data-tab-scroll className="absolute inset-0 overflow-y-auto overscroll-contain pt-safe"
       style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}
     >
       <Suspense fallback={<div className="p-4" aria-busy="true"><div className="h-8 w-40 animate-pulse rounded-lg bg-surface-2" /></div>}>
@@ -69,8 +69,10 @@ const ICONS: Record<TabKey, string> = {
 const LABELS: Record<TabKey, string> = { home: 'Home', calendar: 'Calendar', activity: 'Activity', money: 'Money' }
 
 function TabLink({ tab, active }: { tab: TabKey; active: boolean }) {
+  const activitySearch = useUi((s) => s.activitySearch)
+  const to = tab === 'activity' && !active ? `${TAB_PATHS.activity}${activitySearch}` : TAB_PATHS[tab]
   return (
-    <Link to={TAB_PATHS[tab]} aria-current={active ? 'page' : undefined}
+    <Link to={to} aria-current={active ? 'page' : undefined}
           className={`flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${active ? 'text-accent' : 'text-muted'}`}>
       <Icon d={ICONS[tab]} />
       {LABELS[tab]}

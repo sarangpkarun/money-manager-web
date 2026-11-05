@@ -16,6 +16,9 @@ interface UiState {
   quickAddOpen: boolean
   quickAddPrefill: QuickAddPrefill | null
   setQuickAddOpen: (o: boolean) => void
+  /** Last Activity query string (with leading ?) so the tab restores its filters when you come back. */
+  activitySearch: string
+  setActivitySearch: (s: string) => void
   /** Opens Quick Add, optionally pre-filled (e.g. a calendar day, or "add another"). */
   openQuickAdd: (prefill?: QuickAddPrefill) => void
 }
@@ -26,6 +29,8 @@ export const useUi = create<UiState>((set) => ({
   setMonth: (month) => set({ month }),
   quickAddOpen: false,
   quickAddPrefill: null,
+  activitySearch: '',
+  setActivitySearch: (activitySearch) => set({ activitySearch }),
   setQuickAddOpen: (quickAddOpen) => set(quickAddOpen ? { quickAddOpen } : { quickAddOpen, quickAddPrefill: null }),
   openQuickAdd: (prefill) => set({ quickAddOpen: true, quickAddPrefill: prefill ?? null }),
 }))

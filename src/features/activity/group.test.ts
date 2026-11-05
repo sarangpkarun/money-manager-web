@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayLabel, flattenGroups, groupByDay, type TxnLike } from './group'
+import { dayLabel, flattenGroups, groupByDay, monthLabel, shiftMonth, type TxnLike } from './group'
 
 const t = (id: string, date: string, kind: string, amount: number, forOther = 0): TxnLike => ({
   id, date, kind, amount_paise: amount, for_other_paise: forOther,
@@ -35,5 +35,19 @@ describe('dayLabel', () => {
     expect(dayLabel('2026-11-02', today)).toBe('Mon, 2 Nov')
     expect(dayLabel('2026-12-25', today)).toBe('Fri, 25 Dec')
     expect(dayLabel('2025-12-25', today)).toBe('Thu, 25 Dec 2025')
+  })
+})
+
+describe('monthLabel / shiftMonth', () => {
+  it('labels months', () => {
+    expect(monthLabel('2026-11')).toBe('November 2026')
+    expect(monthLabel('2027-01')).toBe('January 2027')
+  })
+  it('shifts across year boundaries', () => {
+    expect(shiftMonth('2026-11', 1)).toBe('2026-12')
+    expect(shiftMonth('2026-12', 1)).toBe('2027-01')
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12')
+    expect(shiftMonth('2026-05', 0)).toBe('2026-05')
+    expect(shiftMonth('2026-03', -15)).toBe('2024-12')
   })
 })

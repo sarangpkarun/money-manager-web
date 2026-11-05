@@ -2,7 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Amount } from './Amount'
 import { Chip } from './Chip'
-import { decideSwipe } from './SwipeRow'
+import userEvent from '@testing-library/user-event'
+import { decideSwipe, SwipeRow } from './SwipeRow'
 import { Toaster } from './Toaster'
 import { runToastAction, showUndo, useToasts } from './toastStore'
 
@@ -78,5 +79,49 @@ describe('decideSwipe', () => {
     expect(decideSwipe(-80)).toBe('left')
     expect(decideSwipe(-79.9)).toBeNull()
     expect(decideSwipe(30, 20)).toBe('right')
+  })
+})
+
+/** Touch sequence (SwipeRow uses touch events on phones). */
+function swipe(target: Element, dx: number) {
+  const t = (x: number) => ({ identifier: 1, target, clientX: x, clientY: 50, pageX: x, pageY: 50, screenX: x, screenY: 50 })
+  fireEvent.touchStart(target, { touches: [t(200)], targetTouches: [t(200)], changedTouches: [t(200)] })
+  for (const f of [0.25, 0.5, 1]) fireEvent.touchMove(target, { touches: [t(200 + dx * f)], targetTouches: [t(200 + dx * f)], changedTouches: [t(200 + dx * f)] })
+  fireEvent.touchEnd(target, { touches: [], targetTouches: [], changedTouches: [t(200 + dx)] })
+}
+
+describe('SwipeRow', () => {
+  it('swiping left past the threshold fires the left action only', () => {
+    const l = vi.fn(), r = vi.fn()
+    render(<SwipeRow onSwipeLeft={l} onSwipeRight={r}><button>row</button></SwipeRow>)
+    swipe(screen.getByRole('button', { name: 'row' }).parentElement as Element, -120)
+    expect(l).toHaveBeenCalledOnce()
+    expect(r).not.toHaveBeenCalled()
+  })
+  it('swiping right past the threshold fires the right action only', () => {
+    const l = vi.fn(), r = vi.fn()
+    render(<SwipeRow onSwipeLeft={l} onSwipeRight={r}><button>row</button></SwipeRow>)
+    swipe(screen.getByRole('button', { name: 'row' }).parentElement as Element, 120)
+    expect(r).toHaveBeenCalledOnce()
+    expect(l).not.toHaveBeenCalled()
+  })
+  it('a short drag does nothing', () => {
+    const l = vi.fn(), r = vi.fn()
+    render(<SwipeRow onSwipeLeft={l} onSwipeRight={r}><button>row</button></SwipeRow>)
+    swipe(screen.getByRole('button', { name: 'row' }).parentElement as Element, -40)
+    expect(l).not.toHaveBeenCalled()
+    expect(r).not.toHaveBeenCalled()
+  })
+  it('a direction with no action is ignored', () => {
+    const l = vi.fn()
+    render(<SwipeRow onSwipeLeft={l}><button>row</button></SwipeRow>)
+    swipe(screen.getByRole('button', { name: 'row' }).parentElement as Element, 150)
+    expect(l).not.toHaveBeenCalled()
+  })
+  it('a tap reaches buttons inside the row (regression: filterTaps swallowed the click)', async () => {
+    const onOpen = vi.fn()
+    render(<SwipeRow onSwipeLeft={() => {}} onSwipeRight={() => {}}><button onClick={onOpen}>row</button></SwipeRow>)
+    await userEvent.click(screen.getByRole('button', { name: 'row' }))
+    expect(onOpen).toHaveBeenCalledTimes(1)
   })
 })

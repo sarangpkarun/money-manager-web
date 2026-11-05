@@ -41,7 +41,8 @@ export function SwipeRow({ children, onSwipeRight, onSwipeLeft, rightLabel = 'Ed
         if (d === 'left') onSwipeLeft?.()
       }
     },
-    { axis: 'x', filterTaps: true, pointer: { touch: true }, threshold: 8 },
+    // No `filterTaps`: it swallows the click on buttons inside the row. The 8px threshold already separates taps from swipes.
+    { axis: 'x', pointer: { touch: true, capture: false }, threshold: 8 },
   )
 
   return (

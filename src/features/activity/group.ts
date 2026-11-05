@@ -56,3 +56,18 @@ export function dayLabel(date: DateStr, today: DateStr): string {
   const base = `${DAYS[dayOfWeek(date)]}, ${d} ${MONTHS[m - 1]}`
   return y === Number(today.slice(0, 4)) ? base : `${base} ${y}`
 }
+
+const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/** "2026-11" -> "November 2026". */
+export function monthLabel(month: string): string {
+  const [y, m] = month.split('-')
+  return `${FULL_MONTHS[Number(m) - 1] ?? month} ${y}`
+}
+
+/** Moves a "yyyy-MM" month by n months. */
+export function shiftMonth(month: string, n: number): string {
+  const [y, m] = month.split('-').map(Number) as [number, number]
+  const idx = y * 12 + (m - 1) + n
+  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, '0')}`
+}
