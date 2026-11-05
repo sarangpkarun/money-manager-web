@@ -195,13 +195,13 @@ isOneToOne: false
                   ]
                 },"push_subscriptions": {
                   Row: {
-                    "created_at": string | null,"endpoint": string,"id": string,"keys": NonNullable<Json>,"user_id": string
+                    "created_at": string | null,"endpoint": string,"id": string,"keys": NonNullable<Json>,"last_seen": string | null,"user_agent": string | null,"user_id": string
                   }
                   Insert: {
-                    "created_at"?: string | null,"endpoint": string,"id"?: string,"keys": NonNullable<Json>,"user_id"?: string
+                    "created_at"?: string | null,"endpoint": string,"id"?: string,"keys": NonNullable<Json>,"last_seen"?: string | null,"user_agent"?: string | null,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string | null,"endpoint"?: string,"id"?: string,"keys"?: NonNullable<Json>,"user_id"?: string
+                    "created_at"?: string | null,"endpoint"?: string,"id"?: string,"keys"?: NonNullable<Json>,"last_seen"?: string | null,"user_agent"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -215,6 +215,19 @@ isOneToOne: false
                   }
                   Update: {
                     "active"?: boolean | null,"id"?: string,"next_date"?: string,"rule"?: string,"template"?: NonNullable<Json>,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"reminder_log": {
+                  Row: {
+                    "claimed_at": string,"key": string,"sent_at": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "claimed_at"?: string,"key": string,"sent_at"?: string | null,"user_id": string
+                  }
+                  Update: {
+                    "claimed_at"?: string,"key"?: string,"sent_at"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -330,6 +343,14 @@ isOneToOne: false
                            },
 "calendar_month":
 { Args: { "p_filters"?: Json,"p_month": string,"p_today": string }; Returns: Json
+                           },
+"claim_due_reminders":
+{ Args: { "p_now"?: string }; Returns: {
+              "body": string,"key": string,"subscriptions": Json,"title": string,"url": string,"user_id": string
+            }[]
+                           },
+"claim_push_subscription":
+{ Args: { "p_endpoint": string,"p_keys": Json,"p_user_agent"?: string }; Returns: undefined
                            },
 "create_entry":
 { Args: { "p_account": string,"p_amount": number,"p_due"?: string,"p_id": string,"p_interest"?: Database["public"]['Enums']["interest_type"],"p_kind": Database["public"]['Enums']["entry_kind"],"p_notes"?: string,"p_person": string,"p_rate_bps"?: number,"p_start": string,"p_title": string }; Returns: {
@@ -464,8 +485,14 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"get_cron_secret":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "is_verified":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"mark_reminder_sent":
+{ Args: { "p_at"?: string,"p_key": string,"p_user": string }; Returns: undefined
                            },
 "mark_unpaid":
 { Args: { "p_entry": string }; Returns: {
@@ -680,6 +707,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"release_reminder":
+{ Args: { "p_key": string,"p_user": string }; Returns: undefined
+                           },
 "search_transactions":
 { Args: { "p_cursor"?: Json,"p_filters"?: Json,"p_limit"?: number }; Returns: {
               "account_id": string,"account_name": string,"amount_paise": number,"category_color": string,"category_icon": string,"category_id": string,"category_name": string,"created_at": string,"date": string,"entry_id": string,"for_other_paise": number,"id": string,"kind": Database["public"]['Enums']["txn_kind"],"notes": string,"others": Json,"place": string,"tags": (string)[],"title": string,"to_account_id": string,"to_account_name": string
