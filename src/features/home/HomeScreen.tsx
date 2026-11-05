@@ -57,7 +57,7 @@ export default function HomeScreen() {
       case 'people': return <PeopleCard key={id} d={d} onOpen={() => navigate('/money')} />
       case 'due_soon': return <DueSoonCard key={id} d={d} today={today} onPay={setPay} onOpen={(eid) => navigate(`/money/entry/${eid}`)} />
       case 'emi_load': return <EmiLoadCard key={id} d={d} today={today} onOpen={() => navigate('/money')} />
-      case 'cards': return <CardsCard key={id} d={d} drill={drill} />
+      case 'cards': return <CardsCard key={id} d={d} drill={drill} today={today} />
       case 'recent': return <RecentCard key={id} d={d} onSeeAll={seeAll} />
       default: return null // reserved for later phases
     }

@@ -116,7 +116,7 @@ describe('Home dashboard', () => {
     const card = screen.getByRole('region', { name: 'Credit cards' })
     expect(card).toHaveTextContent('₹2,000')
     expect(card).toHaveTextContent('20% of ₹10,000')
-    expect(card).toHaveTextContent('Due on the 22nd')
+    expect(card).toHaveTextContent('Bill due 22 Nov (in 12 days)')
     expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '20')
     await user.click(within(card).getByRole('button'))
     expect(screen.getByTestId('where')).toHaveTextContent(`/activity?acc=${CARD}`)
@@ -276,6 +276,25 @@ describe('Home dashboard', () => {
     ui()
     expect(screen.queryByRole('region', { name: 'Due soon' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'EMI & loan load' })).toBeNull()
+  })
+
+  it('Cards: shows what friends still owe, overall and on each card', () => {
+    m.data = dash({ friends: { pending_paise: 2_000_000, by_account: [{ account_id: CARD, pending_paise: 2_000_000 }] } })
+    ui()
+    const card = screen.getByRole('region', { name: 'Credit cards' })
+    expect(card).toHaveTextContent('₹20,000 to get back from friends')
+    expect(card).toHaveTextContent('₹20,000 of this is for friends')
+  })
+
+  it('Cards: nothing about friends when nobody owes, and no due date when the card has none', () => {
+    m.data = dash({
+      friends: { pending_paise: 0, by_account: [] },
+      accounts: dash().accounts.map((a) => (a.type === 'credit_card' ? { ...a, due_day: null } : a)),
+    })
+    ui()
+    const card = screen.getByRole('region', { name: 'Credit cards' })
+    expect(card).not.toHaveTextContent('friends')
+    expect(card).not.toHaveTextContent('Bill due')
   })
 })
 

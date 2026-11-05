@@ -17,6 +17,7 @@ import { ageingBars } from '@/features/money/ageing'
 import { dueText } from '@/features/money/status'
 import { diffDays } from '@/lib/dates'
 import { debtFreeText, loadBars } from './emiLoad'
+import { cardDueText, nextCardDue } from '@/lib/cardCycle'
 import type { DueSoonItem } from './dashboardTypes'
 
 export function Card({ title, action, children, label }: { title: string; action?: ReactNode; children: ReactNode; label?: string }) {
@@ -138,11 +139,16 @@ export function WhereItWentCard({ d, drill }: { d: Dashboard; drill: Drill }) {
 // ------------------------------------------------------------------ Cards
 const TONE_BG = { green: 'bg-money-green', amber: 'bg-money-amber', red: 'bg-money-red' } as const
 
-export function CardsCard({ d, drill }: { d: Dashboard; drill: Drill }) {
+export function CardsCard({ d, drill, today }: { d: Dashboard; drill: Drill; today: string }) {
   const cards = d.accounts.filter((a) => a.type === 'credit_card')
   if (cards.length === 0) return null
+  const friends = d.friends
+  const forFriends = (accountId: string) => friends?.by_account.find((x) => x.account_id === accountId)?.pending_paise ?? 0
   return (
     <Card title="Credit cards">
+      {friends && friends.pending_paise > 0 && (
+        <p className="mb-3 rounded-xl bg-money-amber/15 px-3 py-2 text-sm text-money-amber">{formatMoney(friends.pending_paise)} to get back from friends</p>
+      )}
       <ul className="space-y-3">
         {cards.map((c) => {
           const bps = utilisationBps(c.outstanding_paise, c.credit_limit_paise)
@@ -161,10 +167,11 @@ export function CardsCard({ d, drill }: { d: Dashboard; drill: Drill }) {
                     </div>
                     <div className="mt-1 flex justify-between text-xs text-muted">
                       <span>{(bps / 100).toFixed(0)}% of {formatMoney(c.credit_limit_paise)}</span>
-                      {c.due_day ? <span>Due on the {c.due_day}{ord(c.due_day)}</span> : null}
+                      {nextCardDue(c.due_day, today) && <span>{cardDueText(nextCardDue(c.due_day, today)!)}</span>}
                     </div>
                   </>
-                ) : c.due_day ? <div className="mt-1 text-xs text-muted">Due on the {c.due_day}{ord(c.due_day)}</div> : null}
+                ) : nextCardDue(c.due_day, today) ? <div className="mt-1 text-xs text-muted">{cardDueText(nextCardDue(c.due_day, today)!)}</div> : null}
+                {forFriends(c.id) > 0 && <div className="mt-1 text-xs text-money-amber">{formatMoney(forFriends(c.id))} of this is for friends</div>}
               </button>
             </li>
           )
@@ -173,8 +180,6 @@ export function CardsCard({ d, drill }: { d: Dashboard; drill: Drill }) {
     </Card>
   )
 }
-
-const ord = (n: number) => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')
 
 // ------------------------------------------------------------------ Recent
 export function RecentCard({ d, onSeeAll }: { d: Dashboard; onSeeAll: () => void }) {

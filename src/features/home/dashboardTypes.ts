@@ -50,6 +50,8 @@ export interface Dashboard {
   accounts: DashboardAccount[]
   /** Lending figures; absent in results cached before Phase 4. */
   people?: MoneyStats
+  /** what friends still owe on purchases paid for them (overall and per account) */
+  friends?: { pending_paise: number; by_account: { account_id: string; pending_paise: number }[] }
   due_soon?: { items: DueSoonItem[]; total_count: number }
   emi_load?: EmiLoad
   net_position?: { assets: number; card_outstanding: number; owed_to_me: number; i_owe: number }
