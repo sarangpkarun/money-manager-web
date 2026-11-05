@@ -39,5 +39,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'tests/unit/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/**/*.ts'],
+      exclude: ['src/lib/**/*.test.ts', 'src/lib/database.types.ts', 'src/lib/supabase.ts', 'src/lib/theme.ts', 'src/lib/uiStore.ts'],
+      thresholds: { lines: 95, functions: 95, statements: 95, branches: 90 },
+    },
   },
 })
