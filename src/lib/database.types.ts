@@ -285,6 +285,9 @@ isOneToOne: false
             "activity_summary":
 { Args: { "p_filters"?: Json }; Returns: Json
                            },
+"dashboard_summary":
+{ Args: { "p_filters"?: Json,"p_month": string,"p_today": string }; Returns: Json
+                           },
 "filter_transactions":
 { Args: { "p_filters": Json }; Returns: {
               "account_id": string | null,
