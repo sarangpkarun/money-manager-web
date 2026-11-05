@@ -18,10 +18,11 @@ import { EntryBadge } from './EntryBadge'
 import { PaymentSheet } from './PaymentSheet'
 import { ChangeAmountSheet, EstimateSheet, ExtraPaymentSheet, SkipSheet } from './PlanActions'
 import { dueText, entryStatusOf, TONE_CLS } from './status'
-import { type EntryDetail, useDeleteEntry, useDeletePayment, useEntry, useMarkUnpaid, useRecordPayment } from './queries'
+import { type EntryDetail, useDeleteEntry, useDeletePayment, useEntry, useMarkUnpaid, useRecordPayment, useUpdateEntry } from './queries'
+import { useUi } from '@/lib/uiStore'
 
 const pct = (bps: number) => `${(bps / 100).toFixed(2).replace(/\.?0+$/, '')}%`
-const KIND_NAME: Record<string, string> = { lent: 'Lent to', borrowed: 'Borrowed from', emi_purchase: 'Bought from', instalment: 'Instalments with' }
+const KIND_NAME: Record<string, string> = { lent: 'Lent to', borrowed: 'Borrowed from', emi_purchase: 'Bought from', instalment: 'Instalments with', on_behalf: 'Paid for' }
 
 function interestLine(e: EntryDetail, today: string): { main: string; extra?: string } {
   if (e.no_cost) return { main: 'No-cost EMI (no interest)' }
@@ -62,6 +63,8 @@ export default function EntryScreen({ id }: { id: string }) {
   const delPayment = useDeletePayment()
   const record = useRecordPayment()
   const unpaid = useMarkUnpaid()
+  const updateEntry = useUpdateEntry()
+  const setActivitySearch = useUi((s) => s.setActivitySearch)
   const [paying, setPaying] = useState(false)
   const [rowSheet, setRowSheet] = useState<RowSheet>(null)
   const [extraOpen, setExtraOpen] = useState(false)
@@ -162,6 +165,24 @@ export default function EntryScreen({ id }: { id: string }) {
           </section>
         )}
 
+        {e.kind === 'on_behalf' && e.source && (
+          <section aria-label="Linked purchase" className="rounded-2xl bg-surface p-4">
+            <h2 className="mb-1 text-sm font-medium text-muted">Linked purchase</h2>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{e.source.title ?? 'Purchase'}</div>
+                <div className="text-sm text-muted">{dayLabel(e.source.date, today)}{e.source.accounts ? ` · ${e.source.accounts.name}` : ''}</div>
+              </div>
+              <div className="shrink-0 text-right text-sm">
+                <div className="tabular font-semibold">{formatMoney(e.source.amount_paise)}</div>
+                <div className="text-muted">your share {formatMoney(e.source.amount_paise - e.source.for_other_paise)}</div>
+              </div>
+            </div>
+            <button className="mt-2 min-h-11 text-sm font-medium text-accent"
+                    onClick={() => { const qs = `?d=custom&from=${e.source!.date}&to=${e.source!.date}`; setActivitySearch(qs); navigate({ pathname: '/activity', search: qs }) }}>View purchase</button>
+          </section>
+        )}
+
         <dl className="divide-y divide-line rounded-2xl bg-surface px-4">
           <Line label={KIND_NAME[e.kind] ?? 'With'}>{e.people?.name ?? e.party_name ?? 'No person'}</Line>
           {e.kind === 'emi_purchase' || e.kind === 'instalment'
@@ -191,6 +212,14 @@ export default function EntryScreen({ id }: { id: string }) {
           )}
         </section>
 
+        {open && (
+          <label className="flex min-h-12 items-center justify-between rounded-2xl bg-surface px-4">
+            <span>Remind me</span>
+            <input type="checkbox" role="switch" aria-label="Remind me" checked={e.remind} disabled={updateEntry.isPending}
+                   onChange={(ev) => void updateEntry.mutateAsync({ id: e.id, patch: { remind: ev.target.checked } }).catch((err: Error) => setError(err.message))} className="h-6 w-6" />
+          </label>
+        )}
+
         {error && <p role="alert" className="text-sm text-money-red">{error}</p>}
         <div className="grid grid-cols-2 gap-3">
           <button className={secondaryBtn} onClick={() => setEditing(true)}>Edit</button>
@@ -217,7 +246,9 @@ export default function EntryScreen({ id }: { id: string }) {
         )}
         {confirm === 'delete' && (
           <ConfirmSheet title="Delete this entry?" confirmLabel="Delete entry" busy={del.isPending} onClose={() => setConfirm(null)}
-            message="This removes the entry, its payments and the transactions they created, so account balances go back to how they were before. This cannot be undone."
+            message={e.kind === 'on_behalf'
+              ? 'This removes what this friend owes, their payments and the transactions those created, so account balances go back to how they were before. The purchase stays and counts fully as your spend. This cannot be undone.'
+              : 'This removes the entry, its payments and the transactions they created, so account balances go back to how they were before. This cannot be undone.'}
             onConfirm={() => void del.mutateAsync(e.id).then(back).catch((err: Error) => { setError(err.message); setConfirm(null) })} />
         )}
       </div>

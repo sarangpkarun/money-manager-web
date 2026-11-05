@@ -68,6 +68,8 @@ export interface EntryDetail extends Entry {
   schedule_items: ScheduleItem[]
   payments: Payment[]
   people: Pick<Person, 'id' | 'name' | 'phone'> | null
+  /** for money paid for someone else: the purchase it came from */
+  source: { id: string; title: string | null; amount_paise: number; for_other_paise: number; date: string; accounts: { name: string } | null } | null
 }
 
 export function useEntry(id: string | undefined) {
@@ -76,7 +78,7 @@ export function useEntry(id: string | undefined) {
     enabled: !!id,
     staleTime: 0,
     queryFn: async (): Promise<EntryDetail | null> => {
-      const { data, error } = await supabase.from('entries').select('*, schedule_items(*), payments(*), people(id,name,phone)').eq('id', id!).maybeSingle()
+      const { data, error } = await supabase.from('entries').select('*, schedule_items(*), payments(*), people(id,name,phone), source:transactions!source_txn_id(id,title,amount_paise,for_other_paise,date,accounts!account_id(name))').eq('id', id!).maybeSingle()
       if (error) throw error
       return data as unknown as EntryDetail | null
     },
@@ -195,7 +197,7 @@ export function useMarkUnpaid() {
   })
 }
 
-export interface EntryPatch { title?: string; notes?: string | null; person_id?: string; due_date?: string | null }
+export interface EntryPatch { title?: string; notes?: string | null; person_id?: string; due_date?: string | null; remind?: boolean }
 
 export function useUpdateEntry() {
   const refresh = useRefreshMoney()

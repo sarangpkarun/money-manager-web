@@ -7,6 +7,8 @@ import { groupByPerson, type GroupSort } from './group'
 import { dueText, entryStatusOf } from './status'
 import type { Direction, OverviewEntry } from './types'
 
+const KIND_TAG: Partial<Record<string, string>> = { emi_purchase: 'EMI', instalment: 'Instalments', on_behalf: 'Paid for' }
+
 const SORTS: { v: GroupSort; label: string }[] = [{ v: 'overdue', label: 'Overdue first' }, { v: 'amount', label: 'Biggest first' }, { v: 'name', label: 'Name' }]
 
 /** Open entries of one direction, grouped by person. */
@@ -47,7 +49,7 @@ export function OwedList({ direction, entries, today, onOpen, onAdd }: {
                 <li key={e.id}>
                   <button onClick={() => onOpen(e.id)} aria-label={`${e.title}, ${g.name}, ${status}, open details`} className="block min-h-16 w-full px-4 py-3 text-left">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate font-medium">{e.title}{e.kind === 'emi_purchase' || e.kind === 'instalment' ? <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-xs font-normal text-muted">{e.kind === 'emi_purchase' ? 'EMI' : 'Instalments'}</span> : null}</span>
+                      <span className="min-w-0 truncate font-medium">{e.title}{KIND_TAG[e.kind] ? <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-xs font-normal text-muted">{KIND_TAG[e.kind]}</span> : null}</span>
                       <Amount paise={e.outstanding_paise} className="shrink-0 font-semibold" />
                     </span>
                     <span className="mt-1 flex items-center justify-between gap-2 text-sm text-muted">

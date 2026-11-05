@@ -90,6 +90,15 @@ describe('Money tab', () => {
     expect(croma).toHaveTextContent('Due in 25 days')
   })
 
+  it('money paid for a friend is tagged "Paid for"', () => {
+    m.overview = overview([entry({ id: 'f1', kind: 'on_behalf', title: 'Dinner', person_id: 'p9', person_name: 'Arun', outstanding_paise: 2_000_000, total_paise: 3_000_000, paid_paise: 1_000_000 })])
+    ui()
+    const arun = screen.getByRole('region', { name: 'Arun' })
+    expect(arun).toHaveTextContent('Dinner')
+    expect(arun).toHaveTextContent('Paid for')
+    expect(arun).toHaveTextContent('33% paid')
+  })
+
   it('I owe shows borrowed entries', async () => {
     const user = userEvent.setup()
     ui()

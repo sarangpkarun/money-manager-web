@@ -1,6 +1,6 @@
 import type { DateStr } from '@/lib/dates'
 
-export type EntryKind = 'lent' | 'borrowed' | 'emi_purchase' | 'instalment'
+export type EntryKind = 'lent' | 'borrowed' | 'emi_purchase' | 'instalment' | 'on_behalf'
 export type Direction = 'receive' | 'pay'
 
 export interface Ageing { current: number; d1_30: number; d31_60: number; d61_plus: number }

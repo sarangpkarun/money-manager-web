@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useUi } from '@/lib/uiStore'
 import { useToasts } from '@/ui/toastStore'
 
 const m = vi.hoisted(() => ({
@@ -341,6 +342,59 @@ describe('Entry detail for plans', () => {
     expect(screen.getByText('₹10,000')).toBeInTheDocument()
     expect(screen.getByText('Down payment')).toBeInTheDocument()
     expect(screen.getByText('No-cost EMI (no interest)')).toBeInTheDocument()
+  })
+})
+
+describe('Entry detail for money paid for someone else', () => {
+  const onBehalf = (o: Record<string, unknown> = {}) => ({
+    ...plan({ kind: 'on_behalf', direction: 'receive', principal_paise: 3_000_000, total_payable_paise: 3_000_000, interest: 'none', due_date: null, title: 'Dinner', remind: true, notes: null,
+      source: { id: 'p1', title: 'Dinner', amount_paise: 3_500_000, for_other_paise: 3_000_000, date: '2026-11-05', accounts: { name: 'HDFC Card' } }, ...o },
+      [planRow(1, '9999-12-31', { due_paise: 3_000_000, principal_paise: 3_000_000 })]),
+  })
+
+  it('shows the linked purchase with your share, and View purchase opens that day in Activity', async () => {
+    const user = userEvent.setup()
+    m.entry = onBehalf()
+    ui()
+    const card = screen.getByRole('region', { name: 'Linked purchase' })
+    expect(card).toHaveTextContent('Dinner')
+    expect(card).toHaveTextContent('HDFC Card')
+    expect(card).toHaveTextContent('₹35,000')
+    expect(card).toHaveTextContent('your share ₹5,000')
+    expect(screen.getByText('Paid for')).toBeInTheDocument()
+    await user.click(within(card).getByRole('button', { name: 'View purchase' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/activity')
+    expect(useUi.getState().activitySearch).toBe('?d=custom&from=2026-11-05&to=2026-11-05')
+  })
+
+  it('other entries have no linked purchase card', () => {
+    m.entry = plan()
+    ui()
+    expect(screen.queryByRole('region', { name: 'Linked purchase' })).toBeNull()
+  })
+
+  it('the Remind me switch reflects the entry and saves a change', async () => {
+    const user = userEvent.setup()
+    m.entry = onBehalf({ remind: true })
+    ui()
+    const toggle = screen.getByRole('switch', { name: 'Remind me' })
+    expect(toggle).toBeChecked()
+    await user.click(toggle)
+    expect(m.update).toHaveBeenCalledWith({ id: 'e1', patch: { remind: false } })
+  })
+
+  it('deleting a friend’s entry says the purchase stays and counts fully as spend', async () => {
+    const user = userEvent.setup()
+    m.entry = onBehalf()
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Delete entry' }))
+    expect(await screen.findByRole('dialog')).toHaveTextContent('The purchase stays and counts fully as your spend')
+  })
+
+  it('a settled entry has no Remind me switch', () => {
+    m.entry = { ...onBehalf(), status: 'settled', schedule_items: [planRow(1, '9999-12-31', { due_paise: 3_000_000, principal_paise: 3_000_000, paid_paise: 3_000_000, paid_on: '2026-11-12' })] }
+    ui()
+    expect(screen.queryByRole('switch', { name: 'Remind me' })).toBeNull()
   })
 })
 
