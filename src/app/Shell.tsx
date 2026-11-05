@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Link, matchPath, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from '@/ui/Toaster'
 import { useAccounts } from '@/features/accounts/queries'
 import { useRecentTransactions } from '@/features/activity/queries'
@@ -11,6 +11,7 @@ const CalendarScreen = lazy(() => import('@/features/calendar/CalendarScreen'))
 const ActivityScreen = lazy(() => import('@/features/activity/ActivityScreen'))
 const MoneyScreen = lazy(() => import('@/features/money/MoneyScreen'))
 const SettingsRoutes = lazy(() => import('@/features/settings/SettingsRoutes'))
+const EntryScreen = lazy(() => import('@/features/money/EntryScreen'))
 const loadQuickAdd = () => import('@/features/quick-add/QuickAddSheet')
 const QuickAddSheet = lazy(loadQuickAdd)
 
@@ -105,7 +106,8 @@ export function Shell() {
   if (tab && !visited.has(tab)) setVisited(new Set(visited).add(tab))
 
   const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
-  if (!tab && !inSettings) return <Navigate to="/" replace />
+  const entryId = matchPath('/money/entry/:id', pathname)?.params.id
+  if (!tab && !inSettings && !entryId) return <Navigate to="/" replace />
 
   return (
     <div className="fixed inset-0 bg-bg">
@@ -130,6 +132,7 @@ export function Shell() {
       </nav>
 
       {inSettings && <Suspense fallback={null}><SettingsRoutes /></Suspense>}
+      {entryId && <Suspense fallback={null}><EntryScreen key={entryId} id={entryId} /></Suspense>}
       <Suspense fallback={null}>{(quickAddOpen || sheetWarm) && <QuickAddSheet />}</Suspense>
       <Prefetch />
       <Toaster />

@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { useAccounts } from '@/features/accounts/queries'
 import { useAddTransaction, useDeleteTransaction, useRecentTransactions, useTitleSuggestions, useUpdateTransaction, type TitleSuggestion } from '@/features/activity/queries'
 import { useCategories } from '@/features/categories/queries'
+import { normaliseName, matchPeople } from '@/features/money/people'
+import { useCreateEntry, useDeleteEntry, usePeople, useSavePerson } from '@/features/money/queries'
 import { useToday } from '@/features/profile/useToday'
 import type { ActivityRow } from '@/lib/db'
 import { formatMoney, toRupeeInput } from '@/lib/money'
@@ -13,7 +15,8 @@ import { Sheet } from '@/ui/Sheet'
 import { useToasts } from '@/ui/toastStore'
 import { evaluateAmount } from './amount'
 import { pickDefaultAccount, rankCategories } from './suggest'
-import { validateQuickAdd, type QuickAddForm, type QuickKind } from './validate'
+import { lendPreview, validateLend, type LendInterest } from './lend'
+import { isLend, validateQuickAdd, type QuickAddForm, type QuickKind } from './validate'
 
 const NONE: never[] = [] // stable empty list so memoised values do not change every render
 const LAST_ACCOUNT = 'mm-last-account'
@@ -22,7 +25,9 @@ const writeLast = (id: string) => { try { localStorage.setItem(LAST_ACCOUNT, id)
 
 const KINDS: { value: QuickKind; label: string }[] = [
   { value: 'expense', label: 'Spent' }, { value: 'income', label: 'Received' }, { value: 'transfer', label: 'Transfer' },
+  { value: 'lent', label: 'Lent' }, { value: 'borrowed', label: 'Borrowed' },
 ]
+const INTERESTS: { value: LendInterest; label: string }[] = [{ value: 'none', label: 'No interest' }, { value: 'flat', label: 'Flat %' }, { value: 'simple', label: 'Simple %' }]
 const OPS = ['+', '−', '×', '÷'] as const
 const OP_CHAR: Record<string, string> = { '−': '-', '×': '*', '÷': '/', '+': '+' }
 
@@ -43,6 +48,11 @@ function QuickAddForm() {
   const add = useAddTransaction()
   const update = useUpdateTransaction()
   const del = useDeleteTransaction()
+  const createEntry = useCreateEntry()
+  const deleteEntry = useDeleteEntry()
+  const savePerson = useSavePerson()
+  const allPeople = usePeople().data ?? NONE
+  const people = useMemo(() => allPeople.filter((p) => !p.archived), [allPeople])
   const toast = useToasts.getState
 
   const [form, setForm] = useState<QuickAddForm>(() =>
@@ -50,6 +60,8 @@ function QuickAddForm() {
       kind: prefill?.kind ?? 'expense', amount: '', title: '', categoryId: null, accountId: prefill?.accountId ?? null, toAccountId: null,
       date: prefill?.date ?? today, place: '', notes: '', tags: '',
     })
+  const [lend, setLend] = useState({ personText: '', personId: prefill?.personId ?? (null as string | null), due: '', interest: 'none' as LendInterest, rate: '' })
+  const [personFocused, setPersonFocused] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [titleFocused, setTitleFocused] = useState(false)
   const [more, setMore] = useState({ place: !!(editing?.place), notes: !!(editing?.notes), tags: !!(editing?.tags?.length) })
@@ -60,9 +72,13 @@ function QuickAddForm() {
   const accountId = form.accountId ?? defaultAccount?.id ?? null
   const set = <K extends keyof QuickAddForm>(k: K, v: QuickAddForm[K]) => setForm((f) => ({ ...f, [k]: v }))
 
+  const lending = isLend(form.kind)
+  const personText = lend.personText || people.find((p) => p.id === lend.personId)?.name || ''
+  const personMatches = useMemo(() => matchPeople(people, personText), [people, personText])
+  const lendForm = { ...form, kind: (form.kind === 'borrowed' ? 'borrowed' : 'lent') as 'lent' | 'borrowed', accountId, personText, personId: lend.personId, due: lend.due, interest: lend.interest, rate: lend.rate }
   const categoryChips = useMemo(
-    () => (form.kind === 'transfer' ? [] : rankCategories(categories.filter((c) => !c.archived || c.id === form.categoryId), recent, form.kind)),
-    [categories, recent, form.kind, form.categoryId],
+    () => (form.kind === 'transfer' || lending ? [] : rankCategories(categories.filter((c) => !c.archived || c.id === form.categoryId), recent, form.kind)),
+    [categories, recent, form.kind, form.categoryId, lending],
   )
   const amount = evaluateAmount(form.amount)
   const suggestions = useTitleSuggestions(titleFocused && !editing ? form.title : '').data ?? []
@@ -85,7 +101,37 @@ function QuickAddForm() {
     amountRef.current?.focus()
   }
 
+  const submitLend = async () => {
+    const r = validateLend(lendForm)
+    if (!r.ok) return setErrors(r.errors)
+    setErrors({})
+    const i = r.input
+    try {
+      // an existing person (picked, or typed exactly) is reused; a new name is created on the spot
+      let personId = i.personId ?? people.find((p) => normaliseName(p.name) === normaliseName(i.personName))?.id ?? null
+      if (!personId) personId = (await savePerson.mutateAsync({ values: { name: i.personName } })).id
+      writeLast(i.account_id)
+      const id = crypto.randomUUID()
+      const saved = createEntry.mutateAsync({
+        id, kind: i.kind, person_id: personId, title: i.title, amount_paise: i.amount_paise, account_id: i.account_id, start_date: i.start_date,
+        due_date: i.due_date, interest: i.interest, rate_bps: i.rate_bps, notes: i.notes,
+      })
+      setQuickAddOpen(false)
+      toast().show({
+        message: `${i.kind === 'lent' ? 'Lent' : 'Borrowed'} ${formatMoney(i.amount_paise)} ${i.kind === 'lent' ? 'to' : 'from'} ${i.personName}`,
+        actions: [
+          { label: 'Undo', run: () => void saved.then(() => deleteEntry.mutateAsync(id)).catch(() => undefined) },
+          { label: 'Add another', run: () => openQuickAdd({ kind: i.kind, accountId: i.account_id, date: i.start_date }) },
+        ],
+      })
+      saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${e.message}`, duration: 8000 }))
+    } catch (e) {
+      setErrors({ person: (e as Error).message })
+    }
+  }
+
   const submit = async () => {
+    if (lending) return submitLend()
     const r = validateQuickAdd({ ...form, accountId })
     if (!r.ok) return setErrors(r.errors)
     setErrors({})
@@ -118,11 +164,11 @@ function QuickAddForm() {
   return (
     <div className="space-y-4" data-testid="quick-add">
       {editing ? <h2 className="text-lg font-semibold">Edit transaction</h2> : (
-        <div role="radiogroup" aria-label="Type" className="grid grid-cols-3 gap-1 rounded-xl bg-surface-2 p-1">
+        <div role="radiogroup" aria-label="Type" className="grid grid-cols-5 gap-1 rounded-xl bg-surface-2 p-1">
           {KINDS.map((k) => (
             <button key={k.value} role="radio" aria-checked={form.kind === k.value} type="button"
                     onClick={() => setForm((f) => ({ ...f, kind: k.value, categoryId: null }))}
-                    className={`min-h-11 rounded-lg text-sm font-medium transition-colors ${form.kind === k.value ? 'bg-surface shadow-sm' : 'text-muted'}`}>
+                    className={`min-h-11 rounded-lg px-0.5 text-[13px] font-medium transition-colors ${form.kind === k.value ? 'bg-surface shadow-sm' : 'text-muted'}`}>
               {k.label}
             </button>
           ))}
@@ -143,13 +189,37 @@ function QuickAddForm() {
           <span className="min-w-20 text-sm text-muted" aria-live="polite">{amount.preview}</span>
         </div>
         {errors.amount && <p role="alert" className="mt-1 text-center text-sm text-money-red">{errors.amount}</p>}
+        {lending && lendPreview(lendForm) && <p className="mt-1 text-center text-sm text-muted" aria-live="polite">{lendPreview(lendForm)}</p>}
       </div>
 
+      {lending && (
+        <div className="relative">
+          <input aria-label="Person" placeholder={form.kind === 'lent' ? 'Lent to…' : 'Borrowed from…'} value={personText} autoComplete="off"
+                 onChange={(e) => setLend((l) => ({ ...l, personText: e.target.value, personId: null }))}
+                 onFocus={() => setPersonFocused(true)} onBlur={() => setTimeout(() => setPersonFocused(false), 150)} className={inputCls} />
+          {personFocused && (personMatches.length > 0 || personText.trim()) && (
+            <ul role="listbox" aria-label="People" className="absolute inset-x-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg">
+              {personMatches.filter((p) => p.id !== lend.personId).map((p) => (
+                <li key={p.id}>
+                  <button type="button" role="option" aria-selected={false} onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { setLend((l) => ({ ...l, personText: p.name, personId: p.id })); setPersonFocused(false) }}
+                          className="flex min-h-11 w-full items-center px-3 text-left">{p.name}</button>
+                </li>
+              ))}
+              {personText.trim() && !people.some((p) => normaliseName(p.name) === normaliseName(personText)) && (
+                <li><div className="flex min-h-11 items-center px-3 text-sm text-muted">New person “{personText.trim()}” will be added</div></li>
+              )}
+            </ul>
+          )}
+          {errors.person && <p role="alert" className="mt-1 text-sm text-money-red">{errors.person}</p>}
+        </div>
+      )}
+
       <div className="relative">
-        <input aria-label="Title" placeholder={form.kind === 'transfer' ? 'Note (optional)' : 'Title, e.g. Lunch'} value={form.title} autoComplete="off"
+        <input aria-label="Title" placeholder={form.kind === 'transfer' ? 'Note (optional)' : lending ? 'Title (optional)' : 'Title, e.g. Lunch'} value={form.title} autoComplete="off"
                onChange={(e) => set('title', e.target.value)} onFocus={() => setTitleFocused(true)} onBlur={() => setTimeout(() => setTitleFocused(false), 150)}
                className={inputCls} />
-        {titleFocused && shownSuggestions.length > 0 && (
+        {titleFocused && !lending && shownSuggestions.length > 0 && (
           <ul role="listbox" aria-label="Suggestions" className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
             {shownSuggestions.map((s) => (
               <li key={s.title}>
@@ -163,7 +233,7 @@ function QuickAddForm() {
         )}
       </div>
 
-      {form.kind !== 'transfer' && (
+      {form.kind !== 'transfer' && !lending && (
         <div data-vaul-no-drag className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="group" aria-label="Category">
           {categoryChips.map((c) => (
             <Chip key={c.id} selected={form.categoryId === c.id} onClick={() => set('categoryId', form.categoryId === c.id ? null : c.id)}>
@@ -174,7 +244,7 @@ function QuickAddForm() {
       )}
 
       <div>
-        <p className="mb-1 text-xs text-muted">{form.kind === 'transfer' ? 'From' : form.kind === 'income' ? 'Into' : 'Paid with'}</p>
+        <p className="mb-1 text-xs text-muted">{form.kind === 'transfer' ? 'From' : form.kind === 'income' || form.kind === 'borrowed' ? 'Into' : form.kind === 'lent' ? 'Paid from' : 'Paid with'}</p>
         <div data-vaul-no-drag className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="group" aria-label="Account">
           {activeAccounts.map((a) => (
             <Chip key={a.id} selected={accountId === a.id} onClick={() => set('accountId', a.id)}>
@@ -206,14 +276,35 @@ function QuickAddForm() {
           <input type="date" aria-label="Date" value={form.date} onChange={(e) => e.target.value && set('date', e.target.value)}
                  className="absolute inset-0 h-full w-full opacity-0" />
         </label>
-        {!more.place && <Chip onClick={() => setMore((m) => ({ ...m, place: true }))}>+ Place</Chip>}
+        {lending && (
+          <label className="relative inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm">
+            ⏰ {lend.due ? `Due ${lend.due}` : 'No due date'}
+            <input type="date" aria-label="Due date" value={lend.due} onChange={(e) => setLend((l) => ({ ...l, due: e.target.value }))} className="absolute inset-0 h-full w-full opacity-0" />
+          </label>
+        )}
+        {lending && lend.due && <Chip onClick={() => setLend((l) => ({ ...l, due: '' }))}>Clear due date</Chip>}
+        {!lending && !more.place && <Chip onClick={() => setMore((m) => ({ ...m, place: true }))}>+ Place</Chip>}
         {!more.notes && <Chip onClick={() => setMore((m) => ({ ...m, notes: true }))}>+ Note</Chip>}
-        {!more.tags && <Chip onClick={() => setMore((m) => ({ ...m, tags: true }))}>+ Tags</Chip>}
+        {!lending && !more.tags && <Chip onClick={() => setMore((m) => ({ ...m, tags: true }))}>+ Tags</Chip>}
       </div>
+      {errors.due && <p role="alert" className="text-sm text-money-red">{errors.due}</p>}
 
-      {more.place && <Field label="Place"><input className={inputCls} value={form.place} onChange={(e) => set('place', e.target.value)} autoComplete="off" /></Field>}
+      {lending && (
+        <div className="space-y-2">
+          <div role="group" aria-label="Interest" className="flex flex-wrap gap-2">
+            {INTERESTS.map((o) => <Chip key={o.value} selected={lend.interest === o.value} onClick={() => setLend((l) => ({ ...l, interest: o.value }))}>{o.label}</Chip>)}
+          </div>
+          {lend.interest !== 'none' && (
+            <Field label={lend.interest === 'flat' ? 'Flat interest (% of the amount, once)' : 'Interest (% a year, up to the due date)'} error={errors.rate}>
+              <input className={inputCls} inputMode="decimal" value={lend.rate} onChange={(e) => setLend((l) => ({ ...l, rate: e.target.value }))} autoComplete="off" />
+            </Field>
+          )}
+        </div>
+      )}
+
+      {!lending && more.place && <Field label="Place"><input className={inputCls} value={form.place} onChange={(e) => set('place', e.target.value)} autoComplete="off" /></Field>}
       {more.notes && <Field label="Note"><input className={inputCls} value={form.notes} onChange={(e) => set('notes', e.target.value)} autoComplete="off" /></Field>}
-      {more.tags && <Field label="Tags" hint="Separate with spaces or commas"><input className={inputCls} value={form.tags} onChange={(e) => set('tags', e.target.value)} autoComplete="off" /></Field>}
+      {!lending && more.tags && <Field label="Tags" hint="Separate with spaces or commas"><input className={inputCls} value={form.tags} onChange={(e) => set('tags', e.target.value)} autoComplete="off" /></Field>}
 
       <button type="button" className={primaryBtn} onClick={() => void submit()}>{editing ? 'Save changes' : 'Save'}</button>
     </div>

@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ActivityRow } from '@/lib/db'
@@ -7,6 +7,7 @@ import { useToasts } from '@/ui/toastStore'
 
 const m = vi.hoisted(() => ({
   add: vi.fn(), update: vi.fn(), del: vi.fn(), suggestions: { data: [] as unknown[] },
+  createEntry: vi.fn(), deleteEntry: vi.fn(), savePerson: vi.fn(),
 }))
 
 const accounts = [
@@ -32,6 +33,14 @@ vi.mock('@/features/activity/queries', () => ({
   useDeleteTransaction: () => ({ mutateAsync: m.del }),
 }))
 
+const people = [{ id: 'ravi', name: 'Ravi Kumar', archived: false }, { id: 'meera', name: 'Meera', archived: false }, { id: 'old', name: 'Old Friend', archived: true }]
+vi.mock('@/features/money/queries', () => ({
+  usePeople: () => ({ data: people }),
+  useCreateEntry: () => ({ mutateAsync: m.createEntry }),
+  useDeleteEntry: () => ({ mutateAsync: m.deleteEntry }),
+  useSavePerson: () => ({ mutateAsync: m.savePerson }),
+}))
+
 import QuickAddSheet from './QuickAddSheet'
 
 beforeAll(() => {
@@ -47,6 +56,9 @@ beforeEach(() => {
   m.add.mockResolvedValue({})
   m.update.mockImplementation((_v, opts) => opts?.onSuccess?.())
   m.del.mockResolvedValue({})
+  m.createEntry.mockResolvedValue({})
+  m.deleteEntry.mockResolvedValue({})
+  m.savePerson.mockResolvedValue({ id: 'new-person' })
   m.suggestions = { data: [] }
   localStorage.clear()
   useToasts.setState({ toasts: [] })
@@ -258,5 +270,94 @@ describe('edit mode', () => {
     expect(m.add).not.toHaveBeenCalled()
     expect(m.update.mock.calls[0]?.[0]).toMatchObject({ id: 'tx1', patch: { amount_paise: 50_000, title: 'Taxi', category_id: 'travel', account_id: 'bank' } })
     expect(toast()?.message).toBe('Updated ₹500 · Travel')
+  })
+})
+
+describe('Lent / Borrowed', () => {
+  it('Lent: person, amount, due date → create_entry payload; toast with Undo deletes the entry', async () => {
+    const { user, dialog } = await open()
+    await user.click(within(dialog).getByRole('radio', { name: 'Lent' }))
+    expect(within(dialog).queryByRole('group', { name: 'Category' })).toBeNull() // no category for loans
+    await user.type(within(dialog).getByLabelText('Amount'), '10000')
+    await user.type(within(dialog).getByLabelText('Person'), 'rav')
+    await user.click(within(dialog).getByRole('option', { name: 'Ravi Kumar' }))
+    fireEvent.change(within(dialog).getByLabelText('Due date'), { target: { value: '2026-12-01' } })
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.createEntry).toHaveBeenCalledOnce()
+    expect(m.createEntry.mock.calls[0]?.[0]).toMatchObject({
+      kind: 'lent', person_id: 'ravi', title: 'Lent to Ravi Kumar', amount_paise: 1_000_000, account_id: 'cash', start_date: '2026-11-05',
+      due_date: '2026-12-01', interest: 'none', rate_bps: 0,
+    })
+    expect(m.savePerson).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(toast()?.message).toBe('Lent ₹10,000 to Ravi Kumar')
+    const id = m.createEntry.mock.calls[0]?.[0].id
+    act(() => toast()?.actions[0]?.run())
+    await waitFor(() => expect(m.deleteEntry).toHaveBeenCalledWith(id))
+  })
+
+  it('a person is required', async () => {
+    const { user, dialog } = await open({ kind: 'lent' })
+    await user.type(within(dialog).getByLabelText('Amount'), '500')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await within(dialog).findByText('Who is it with?')).toBeInTheDocument()
+    expect(m.createEntry).not.toHaveBeenCalled()
+  })
+
+  it('a new name creates the person first, then the entry', async () => {
+    const { user, dialog } = await open({ kind: 'borrowed' })
+    await user.type(within(dialog).getByLabelText('Amount'), '2500')
+    await user.type(within(dialog).getByLabelText('Person'), 'Priya')
+    expect(within(dialog).getByText(/New person “Priya” will be added/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.savePerson).toHaveBeenCalledWith({ values: { name: 'Priya' } })
+    expect(m.createEntry.mock.calls[0]?.[0]).toMatchObject({ kind: 'borrowed', person_id: 'new-person', title: 'Borrowed from Priya', amount_paise: 250_000 })
+    expect(within(dialog).queryByRole('button', { name: '+ Place' })).toBeNull()
+  })
+
+  it('typing an existing name exactly reuses that person', async () => {
+    const { user, dialog } = await open({ kind: 'lent' })
+    await user.type(within(dialog).getByLabelText('Amount'), '100')
+    await user.type(within(dialog).getByLabelText('Person'), 'meera')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.savePerson).not.toHaveBeenCalled()
+    expect(m.createEntry.mock.calls[0]?.[0].person_id).toBe('meera')
+  })
+
+  it('opening from a person pre-selects them', async () => {
+    const { user, dialog } = await open({ kind: 'lent', personId: 'ravi' })
+    expect(within(dialog).getByLabelText('Person')).toHaveValue('Ravi Kumar')
+    await user.type(within(dialog).getByLabelText('Amount'), '300')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.createEntry.mock.calls[0]?.[0].person_id).toBe('ravi')
+  })
+
+  it('flat interest shows the total and sends the rate', async () => {
+    const { user, dialog } = await open({ kind: 'lent', personId: 'ravi' })
+    await user.type(within(dialog).getByLabelText('Amount'), '10000')
+    await user.click(within(dialog).getByRole('button', { name: 'Flat %' }))
+    await user.type(within(dialog).getByLabelText(/Flat interest/), '10')
+    expect(within(dialog).getByText('You get back ₹11,000 (₹1,000 interest)')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.createEntry.mock.calls[0]?.[0]).toMatchObject({ interest: 'flat', rate_bps: 1000 })
+  })
+
+  it('simple interest without a due date is refused', async () => {
+    const { user, dialog } = await open({ kind: 'lent', personId: 'ravi' })
+    await user.type(within(dialog).getByLabelText('Amount'), '10000')
+    await user.click(within(dialog).getByRole('button', { name: 'Simple %' }))
+    await user.type(within(dialog).getByLabelText(/Interest \(% a year/), '12')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await within(dialog).findByText('Simple interest needs a due date')).toBeInTheDocument()
+    expect(m.createEntry).not.toHaveBeenCalled()
+  })
+
+  it('spent still saves a normal expense after switching back', async () => {
+    const { user, dialog } = await open({ kind: 'lent' })
+    await user.click(within(dialog).getByRole('radio', { name: 'Spent' }))
+    await user.type(within(dialog).getByLabelText('Amount'), '90')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.add).toHaveBeenCalled()
+    expect(m.createEntry).not.toHaveBeenCalled()
   })
 })

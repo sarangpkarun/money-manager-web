@@ -3,7 +3,9 @@ import type { ActivityRow } from './db'
 
 export interface QuickAddPrefill {
   date?: string
-  kind?: 'expense' | 'income' | 'transfer'
+  kind?: 'expense' | 'income' | 'transfer' | 'lent' | 'borrowed'
+  /** Lent / Borrowed: pre-select this person. */
+  personId?: string
   accountId?: string
   /** Edit this existing transaction instead of adding a new one. */
   edit?: ActivityRow
