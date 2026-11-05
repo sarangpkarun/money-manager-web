@@ -10,11 +10,11 @@ function Item({ t }: { t: Toast }) {
   return (
     <div role="status" className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-fg px-4 py-3 text-sm text-bg shadow-lg">
       <span className="flex-1">{t.message}</span>
-      {t.actionLabel && (
-        <button onClick={() => runToastAction(t.id)} className="min-h-11 px-2 font-semibold text-accent">
-          {t.actionLabel}
+      {t.actions.map((a, i) => (
+        <button key={a.label} onClick={() => runToastAction(t.id, i)} className="min-h-11 px-2 font-semibold text-accent">
+          {a.label}
         </button>
-      )}
+      ))}
     </div>
   )
 }

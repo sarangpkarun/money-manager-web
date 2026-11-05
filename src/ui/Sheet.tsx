@@ -9,15 +9,17 @@ interface SheetProps {
   children: ReactNode
   /** Hides the visible title but keeps it for screen readers. */
   hideTitle?: boolean
+  /** Called when the sheet opens; preventDefault() keeps focus where the content put it (e.g. autoFocus). */
+  onOpenAutoFocus?: (e: Event) => void
 }
 
 /** Bottom sheet with safe-area padding; content scrolls inside, the page behind does not. */
-export function Sheet({ open, onOpenChange, title, description, children, hideTitle }: SheetProps) {
+export function Sheet({ open, onOpenChange, title, description, children, hideTitle, onOpenAutoFocus }: SheetProps) {
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Drawer.Content className="fixed inset-x-0 bottom-0 z-[60] flex max-h-[92%] flex-col rounded-t-3xl bg-surface outline-none">
+        <Drawer.Content onOpenAutoFocus={onOpenAutoFocus} className="fixed inset-x-0 bottom-0 z-[60] flex max-h-[92%] flex-col rounded-t-3xl bg-surface outline-none">
           <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-line" aria-hidden />
           <Drawer.Title className={hideTitle ? 'sr-only' : 'px-4 pt-3 text-lg font-semibold'}>{title}</Drawer.Title>
           <Drawer.Description className={description ? 'px-4 text-sm text-muted' : 'sr-only'}>{description ?? title}</Drawer.Description>

@@ -1,17 +1,21 @@
 import { create } from 'zustand'
 
+export interface ToastAction {
+  label: string
+  run: () => void
+}
+
 export interface Toast {
   id: number
   message: string
-  actionLabel?: string
-  onAction?: () => void
+  actions: ToastAction[]
   /** ms before auto-dismiss */
   duration: number
 }
 
 interface ToastState {
   toasts: Toast[]
-  show: (t: { message: string; actionLabel?: string; onAction?: () => void; duration?: number }) => number
+  show: (t: { message: string; actions?: ToastAction[]; duration?: number }) => number
   dismiss: (id: number) => void
 }
 
@@ -20,21 +24,21 @@ const MAX = 3
 
 export const useToasts = create<ToastState>((set) => ({
   toasts: [],
-  show: ({ duration = 5000, ...t }) => {
+  show: ({ duration = 5000, actions = [], message }) => {
     const id = next++
-    set((s) => ({ toasts: [...s.toasts, { id, duration, ...t }].slice(-MAX) }))
+    set((s) => ({ toasts: [...s.toasts, { id, duration, actions, message }].slice(-MAX) }))
     return id
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }))
 
-/** Runs the action once and removes the toast (used by the Undo button). */
-export function runToastAction(id: number) {
+/** Runs one action of a toast (at most once) and removes the toast. */
+export function runToastAction(id: number, index = 0) {
   const t = useToasts.getState().toasts.find((x) => x.id === id)
   useToasts.getState().dismiss(id)
-  t?.onAction?.()
+  t?.actions[index]?.run()
 }
 
-/** Convenience: "Deleted · Undo". */
-export const showUndo = (message: string, onUndo: () => void, actionLabel = 'Undo') =>
-  useToasts.getState().show({ message, actionLabel, onAction: onUndo })
+/** "Deleted · Undo". */
+export const showUndo = (message: string, onUndo: () => void, label = 'Undo') =>
+  useToasts.getState().show({ message, actions: [{ label, run: onUndo }] })

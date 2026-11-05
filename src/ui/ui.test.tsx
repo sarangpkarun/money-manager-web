@@ -47,6 +47,14 @@ describe('toasts', () => {
     expect(undo).toHaveBeenCalledOnce()
     expect(useToasts.getState().toasts).toHaveLength(0)
   })
+  it('supports several actions and runs only the chosen one', () => {
+    const a = vi.fn(), b = vi.fn()
+    const id = useToasts.getState().show({ message: 'Added', actions: [{ label: 'Undo', run: a }, { label: 'Add another', run: b }] })
+    runToastAction(id, 1)
+    expect(b).toHaveBeenCalledOnce()
+    expect(a).not.toHaveBeenCalled()
+    expect(useToasts.getState().toasts).toHaveLength(0)
+  })
   it('renders, offers Undo and auto-dismisses', () => {
     vi.useFakeTimers()
     const undo = vi.fn()

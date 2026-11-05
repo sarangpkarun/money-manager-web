@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from '@/ui/Toaster'
+import { useAccounts } from '@/features/accounts/queries'
+import { useRecentTransactions } from '@/features/activity/queries'
+import { useCategories } from '@/features/categories/queries'
 import { useUi } from '@/lib/uiStore'
 import HomeScreen from '@/features/home/HomeScreen'
 
@@ -75,10 +78,18 @@ function TabLink({ tab, active }: { tab: TabKey; active: boolean }) {
   )
 }
 
+/** Warms the caches Quick Add needs so the sheet opens with data already there. */
+function Prefetch() {
+  useAccounts()
+  useCategories()
+  useRecentTransactions()
+  return null
+}
+
 export function Shell() {
   const { pathname } = useLocation()
   const tab = tabForPath(pathname)
-  const { quickAddOpen, setQuickAddOpen } = useUi()
+  const { quickAddOpen, openQuickAdd } = useUi()
   const [sheetWarm, setSheetWarm] = useState(false)
   const [visited, setVisited] = useState<Set<TabKey>>(() => new Set(['home']))
 
@@ -108,7 +119,7 @@ export function Shell() {
            style={{ minHeight: 'calc(64px + env(safe-area-inset-bottom))' }}>
         <TabLink tab="home" active={tab === 'home'} />
         <TabLink tab="calendar" active={tab === 'calendar'} />
-        <button aria-label="Quick add" onClick={() => setQuickAddOpen(true)}
+        <button aria-label="Quick add" onClick={() => openQuickAdd()}
                 className="mx-2 flex h-12 w-12 items-center justify-center rounded-full bg-accent text-white transition-transform active:scale-90">
           <Icon d="M12 5v14M5 12h14" />
         </button>
@@ -118,6 +129,7 @@ export function Shell() {
 
       {inSettings && <Suspense fallback={null}><SettingsRoutes /></Suspense>}
       <Suspense fallback={null}>{(quickAddOpen || sheetWarm) && <QuickAddSheet />}</Suspense>
+      <Prefetch />
       <Toaster />
     </div>
   )
