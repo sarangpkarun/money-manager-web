@@ -8,3 +8,4 @@ dev-dist
 supabase/.temp
 supabase/.branches
 *.local
+coverage
