@@ -440,3 +440,18 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 - [ ] Earlier open items: Phase 0 viewport gap, push spike, Supabase redirect URLs; Phase 1 to 4 commits are not pushed to GitHub.
 
 **Known limits:** no Person or Status filter in Activity yet; no offline write queue; open-ended simple interest, multi-row schedules, EMIs and On-behalf arrive in Phases 5 and 6; reminders are Phase 7.
+
+## Phase 5A status (updated 2026-11-06): plans, EMI, plan-row actions
+
+**Built and verified locally:** migration `20260105000001_plans.sql` (`create_entry_with_plan`, multi-row `record_payment` with a target row, `delete_payment` that reverses a whole cash movement, `plan_skip_month`, `plan_change_amount`, `plan_extra_payment` with a stale-plan check, rows-based `money_stats` / `money_overview` / `money_history` / `people_balances`, `dashboard_summary` extended with `due_soon` and `emi_load`, `entries.category_id`); Quick Add **Repay in instalments** (equal split, by monthly amount, weekly, custom dates, EMI with interest) and the **EMI / instalments** sheet (store, product, price, down payment, no-cost EMI, category, live preview); entry screen with instalment rows (early / on time / late / overdue / upcoming labels), pay any row, skip month, change amount and extra payment with a preview of what changes, prepay / foreclose estimate sheet; Home **Due soon** (with Pay) and **EMI & loan load** (12 monthly bars, debt-free date); Money rows show "3 of 10 paid" and an EMI tag; EMI instalments and down payments are expenses; entry-linked transactions are read-only in Activity.
+
+**Decision (yours):** the app computes plan rows with the tested TypeScript and the server validates and stores them (no SQL copy of the maths). The 14-case golden fixture is replayed against SQL: every case is accepted and round-trips exactly.
+
+**Numbers:** 501 unit/component tests, 152 SQL/RLS tests, 14 Playwright e2e tests, coverage 99.8% lines on `src/lib`. Scenarios B, C and D pass end to end in the browser (including balances and the "paid early" / "paid late (2 days)" labels). Money overview 61 ms and dashboard 104 ms with 2,000 plans × 12 rows (budget 150). Initial JS 185.3 KB gz (budget 200).
+
+**Bugs the tests caught:** two RPC calls dropped arguments without SQL defaults (PostgREST then cannot find the function); fixed and guarded by payload tests.
+
+**Not done / needs you:**
+- [ ] `supabase db push` for `20260105000001_plans.sql` (after your approval), then try an EMI and a plan on the deployed app.
+- [ ] On-device iPhone check of the plan form, the entry screen rows and Home cards.
+- [ ] Stage 5B (Calendar, day sheet, notes/tasks, repeat rules) and the blue ✓ marker acceptance for scenario B come next.

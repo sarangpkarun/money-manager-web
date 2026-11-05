@@ -20,3 +20,15 @@ export async function login(page: Page, u: E2EUser) {
 }
 
 export { deleteUser, sql }
+
+/** Today's date (yyyy-MM-dd) exactly as the app computes it: in the user's profile timezone. */
+export async function appToday(userId: string): Promise<string> {
+  const tz = (await sql(`select timezone from profiles where id = $1`, [userId])).rows[0]?.timezone ?? 'UTC'
+  return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+}
+
+export const shiftDate = (d: string, days: number): string => {
+  const t = new Date(`${d}T00:00:00Z`)
+  t.setUTCDate(t.getUTCDate() + days)
+  return t.toISOString().slice(0, 10)
+}

@@ -280,8 +280,9 @@ export function useCreatePlan() {
   return useMutation({
     mutationFn: async (i: NewPlan) => {
       const { data, error } = await supabase.rpc('create_entry_with_plan', {
-        p_id: i.id, p_kind: i.kind, p_person: (i.person_id ?? undefined) as string, p_party: (i.party ?? undefined) as string, p_title: i.title,
-        p_principal: i.principal_paise, p_down: i.down_paise, p_account: i.account_id, p_category: (i.category_id ?? undefined) as string,
+        p_id: i.id, p_kind: i.kind, // these three have no SQL defaults, so they must be sent (as null) rather than omitted
+        p_person: i.person_id as string, p_party: i.party as string, p_title: i.title,
+        p_principal: i.principal_paise, p_down: i.down_paise, p_account: i.account_id, p_category: i.category_id as string,
         p_start: i.start_date, p_interest: i.interest, p_rate_bps: i.rate_bps, p_no_cost: i.no_cost, p_rows: i.rows as Json,
       })
       if (error) throw error
@@ -323,7 +324,8 @@ export function useExtraPayment() {
     mutationFn: async (x: ExtraPayment) => {
       const { error } = await supabase.rpc('plan_extra_payment', {
         p_id: x.id, p_entry: x.entry_id, p_amount: x.amount_paise, p_paid_on: x.paid_on, p_account: x.account_id,
-        p_mode: (x.mode ?? undefined) as PayMode, p_note: (x.note ?? undefined) as string, p_base: x.base as Json, p_rows: x.rows as Json,
+        // p_mode and p_note have no SQL defaults: send null rather than omit
+        p_mode: (x.mode ?? null) as PayMode, p_note: (x.note ?? null) as string, p_base: x.base as Json, p_rows: x.rows as Json,
       })
       if (error) throw error
     },

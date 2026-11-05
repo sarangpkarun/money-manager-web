@@ -1,1 +1,1 @@
-{"root":["./vite.config.ts","./vitest.rls.config.ts","./playwright.config.ts","./e2e/activity-scale.spec.ts","./e2e/dashboard.spec.ts","./e2e/helpers.ts","./e2e/money.spec.ts","./e2e/quick-add.spec.ts"],"version":"6.0.3"}
+{"root":["./vite.config.ts","./vitest.rls.config.ts","./playwright.config.ts","./e2e/activity-scale.spec.ts","./e2e/dashboard.spec.ts","./e2e/helpers.ts","./e2e/money.spec.ts","./e2e/plans.spec.ts","./e2e/quick-add.spec.ts"],"version":"6.0.3"}
