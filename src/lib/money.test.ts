@@ -1,6 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { assertPaise, formatMoney, groupDigits, parseAmountExpression, parseRupees } from './money'
+import { assertPaise, formatMoney, groupDigits, mulDiv, parseAmountExpression, parseRupees } from './money'
 
 describe('assertPaise', () => {
   it('accepts integers, rejects fractions and unsafe values', () => {
@@ -92,5 +92,22 @@ describe('formatMoney', () => {
         parseRupees(formatMoney(p, { format, paise: 'always' })) === p,
       ),
     )
+  })
+})
+
+describe('mulDiv', () => {
+  it('rounds half up and stays exact beyond 2^53 intermediates', () => {
+    expect(mulDiv(10, 1, 4)).toBe(3) // 2.5 -> 3
+    expect(mulDiv(10, 1, 3)).toBe(3)
+    expect(mulDiv(0, 5, 7)).toBe(0)
+    // 1e12 paise * 1e4 = 1e16 exceeds Number.MAX_SAFE_INTEGER; BigInt keeps it exact
+    expect(mulDiv(1e12, 1e4, 1e4)).toBe(1e12)
+    expect(mulDiv(123_456_789_012, 1250, 10_000)).toBe(15_432_098_627)
+  })
+  it('rejects negatives, fractions and a zero divisor', () => {
+    expect(() => mulDiv(-1, 1, 1)).toThrow(RangeError)
+    expect(() => mulDiv(1, -1, 1)).toThrow(RangeError)
+    expect(() => mulDiv(1, 1, 0)).toThrow(RangeError)
+    expect(() => mulDiv(1, 1.5, 1)).toThrow(RangeError)
   })
 })

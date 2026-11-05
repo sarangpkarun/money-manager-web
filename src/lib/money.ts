@@ -144,3 +144,12 @@ export function formatMoney(paise: Paise, opts: FormatOptions = {}): string {
   const body = groupDigits(String(rupees), format) + (showPaise ? `.${String(rem).padStart(2, '0')}` : '')
   return `${paise < 0 ? '-' : ''}${symbol ? '₹' : ''}${body}`
 }
+
+/** round(a * b / c) for a, b >= 0 and c > 0, exact via BigInt (half rounds up). Use for rates/percentages. */
+export function mulDiv(a: number, b: number, c: number): Paise {
+  assertPaise(a)
+  if (a < 0 || b < 0 || !Number.isSafeInteger(b) || !Number.isSafeInteger(c) || c <= 0)
+    throw new RangeError('mulDiv needs non-negative safe integers and a positive divisor')
+  const r = divRound(BigInt(a) * BigInt(b), BigInt(c))
+  return assertPaise(Number(r))
+}
