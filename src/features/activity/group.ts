@@ -1,4 +1,5 @@
-import { dayOfWeek, diffDays, parseDate, type DateStr } from '@/lib/dates'
+import { diffDays, type DateStr } from '@/lib/dates'
+import { formatDisplayDate } from '@/lib/display'
 
 export interface TxnLike {
   id: string
@@ -44,17 +45,12 @@ export function flattenGroups<T extends TxnLike>(groups: DayGroup<T>[]): ListIte
   ])
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 /** "Today", "Yesterday", otherwise "Wed, 5 Nov" (year added when it is not the current year). */
 export function dayLabel(date: DateStr, today: DateStr): string {
   const ago = diffDays(date, today)
   if (ago === 0) return 'Today'
   if (ago === 1) return 'Yesterday'
-  const { y, m, d } = parseDate(date)
-  const base = `${DAYS[dayOfWeek(date)]}, ${d} ${MONTHS[m - 1]}`
-  return y === Number(today.slice(0, 4)) ? base : `${base} ${y}`
+  return formatDisplayDate(date, { weekday: 'short', year: Number(date.slice(0, 4)) !== Number(today.slice(0, 4)) })
 }
 
 const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']

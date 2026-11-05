@@ -1,3 +1,4 @@
+import { getDisplay } from './display'
 /** Money is a whole number of paise (1 rupee = 100 paise). Never use floats for stored amounts. */
 export type Paise = number
 
@@ -135,7 +136,7 @@ export function groupDigits(digits: string, format: 'indian' | 'western'): strin
 }
 
 export function formatMoney(paise: Paise, opts: FormatOptions = {}): string {
-  const { format = 'indian', paise: mode = 'auto', symbol = true } = opts
+  const { format = getDisplay().number, paise: mode = 'auto', symbol = true } = opts
   assertPaise(paise)
   const abs = Math.abs(paise)
   const rupees = Math.floor(abs / 100)

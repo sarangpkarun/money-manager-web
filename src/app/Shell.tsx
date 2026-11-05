@@ -4,6 +4,8 @@ import { Toaster } from '@/ui/Toaster'
 import { useAccounts } from '@/features/accounts/queries'
 import { useRecentTransactions } from '@/features/activity/queries'
 import { useCategories } from '@/features/categories/queries'
+import { useProfile } from '@/features/profile/useProfile'
+import { setDisplay, useDisplayVersion } from '@/lib/display'
 import { useUi } from '@/lib/uiStore'
 import HomeScreen from '@/features/home/HomeScreen'
 import { tabFiltersFromSearch, tabRpcFilters } from '@/features/home/useTabFilters'
@@ -85,6 +87,15 @@ function TabLink({ tab, active }: { tab: TabKey; active: boolean }) {
   )
 }
 
+/** Applies the profile's number and date format app-wide (see lib/display.ts). */
+function DisplaySync() {
+  const { data } = useProfile()
+  const number = data?.number_format
+  const date = data?.date_format
+  useEffect(() => { setDisplay({ number, date }) }, [number, date])
+  return null
+}
+
 /** Warms the caches Quick Add needs so the sheet opens with data already there. */
 function Prefetch() {
   useAccounts()
@@ -105,6 +116,7 @@ function Prefetch() {
 }
 
 export function Shell() {
+  useDisplayVersion((s) => s.version) // re-render every screen when the number or date format changes
   const { pathname } = useLocation()
   const tab = tabForPath(pathname)
   const { quickAddOpen, openQuickAdd, emiOpen, setEmiOpen } = useUi()
@@ -150,6 +162,7 @@ export function Shell() {
       {entryId && <Suspense fallback={null}><EntryScreen key={entryId} id={entryId} /></Suspense>}
       <Suspense fallback={null}>{(quickAddOpen || sheetWarm) && <QuickAddSheet />}</Suspense>
       <Suspense fallback={null}>{emiOpen && <EmiSheet open onClose={() => setEmiOpen(false)} />}</Suspense>
+      <DisplaySync />
       <Prefetch />
       <Toaster />
     </div>

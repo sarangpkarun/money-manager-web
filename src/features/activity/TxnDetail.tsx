@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { ActivityRow } from '@/lib/db'
+import { formatDisplayDate } from '@/lib/display'
 import { formatMoney } from '@/lib/money'
 import { Amount } from '@/ui/Amount'
 import { secondaryBtn } from '@/ui/Field'
@@ -46,7 +47,7 @@ export function TxnDetail({ row, onClose, onEdit, onDelete, onOpenEntry }: { row
         </section>
       )}
       <dl className="divide-y divide-line">
-        <Line label="Date">{row.date}</Line>
+        <Line label="Date">{formatDisplayDate(row.date)}</Line>
         {row.kind === 'transfer'
           ? <><Line label="From">{row.account_name}</Line><Line label="To">{row.to_account_name}</Line></>
           : <><Line label="Account">{row.account_name}</Line>{row.category_name && <Line label="Category">{row.category_name}</Line>}</>}

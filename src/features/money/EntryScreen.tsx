@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { isPaid, remaining } from '@/lib/allocate'
 import { diffDays, hasDueDate } from '@/lib/dates'
+import { formatDisplayDate } from '@/lib/display'
 import { interestToDate } from '@/lib/interest'
 import { rowLabel } from '@/lib/labels'
 import { formatMoney } from '@/lib/money'
@@ -190,8 +191,8 @@ export default function EntryScreen({ id }: { id: string }) {
             : <Line label="Amount">{formatMoney(e.principal_paise)}</Line>}
           <Line label="Interest">{interest.main}{interest.extra && <span className="block text-sm text-muted">{interest.extra}</span>}</Line>
           <Line label="Started">{dayLabel(e.start_date, today)}</Line>
-          {!multi && <Line label="Due">{hasDueDate(rows[0]?.due_date) ? rows[0]?.due_date : 'No due date'}</Line>}
-          {multi && <Line label="Last instalment">{rows[rows.length - 1]?.due_date}</Line>}
+          {!multi && <Line label="Due">{hasDueDate(rows[0]?.due_date) ? formatDisplayDate(rows[0]!.due_date) : 'No due date'}</Line>}
+          {multi && <Line label="Last instalment">{formatDisplayDate(rows[rows.length - 1]!.due_date)}</Line>}
           {e.notes && <Line label="Notes">{e.notes}</Line>}
         </dl>
 
