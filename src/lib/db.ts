@@ -16,7 +16,10 @@ type Nullable = 'account_id' | 'account_name' | 'to_account_id' | 'to_account_na
  * One row of the search_transactions RPC (transaction joined with account/category names).
  * Generated types cannot express nullable columns of a `returns table`, so they are declared here.
  */
-export type ActivityRow = Omit<SearchRow, Nullable | 'tags'> & { [K in Nullable]: string | null } & { tags: string[] | null }
+/** What a friend still owes on a purchase paid for them. */
+export interface OtherPending { entry_id: string; person_id: string | null; person_name: string | null; amount_paise: number; pending_paise: number }
+/** `others` is optional: rows cached before Phase 6 do not have it. */
+export type ActivityRow = Omit<SearchRow, Nullable | 'tags' | 'others'> & { [K in Nullable]: string | null } & { tags: string[] | null; others?: OtherPending[] | null }
 export type TxnKind = Pub['Enums']['txn_kind']
 export type AccountType = Pub['Enums']['account_type']
 export type Person = Row<'people'>

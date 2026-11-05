@@ -94,7 +94,7 @@ describe('create_entry_with_plan validation', () => {
       ['interest on an interest-free plan', payload(rows).map((r, i) => (i === 0 ? { ...r, due_paise: r.due_paise + 5, interest_paise: 5 } : r)), {}, /no interest/],
       ['flat mismatch', payload(rows), { interest: 'flat', rate: 1000 }, /flat interest does not match/],
       ['interest needs a rate', payload(rows), { interest: 'simple', rate: 0 }, /rate/],
-      ['unsupported kind', payload(rows), { kind: 'on_behalf' }, /unsupported/],
+      ['on-behalf needs its purchase', payload(rows), { kind: 'on_behalf' }, /purchase was not found/],
       ['lent needs a person', payload(rows), { kind: 'lent', person: null }, /person not found/],
       ['EMI needs a store or person', payload(rows), { kind: 'emi_purchase', person: null }, /store or person/],
       ['down payment is for purchases', payload(rows), { down: 100 }, /purchases only/],

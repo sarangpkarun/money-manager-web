@@ -316,6 +316,12 @@ isOneToOne: false
 "_plan_replace":
 { Args: { "p_action": string,"p_base": Json,"p_entry": string,"p_extra": number,"p_rows": Json }; Returns: undefined
                            },
+"_sync_for_other":
+{ Args: { "p_txn": string }; Returns: undefined
+                           },
+"_txn_others":
+{ Args: { "p_txn": string }; Returns: Json
+                           },
 "activity_summary":
 { Args: { "p_filters"?: Json }; Returns: Json
                            },
@@ -357,7 +363,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "create_entry_with_plan":
-{ Args: { "p_account": string,"p_category": string,"p_down": number,"p_id": string,"p_interest": Database["public"]['Enums']["interest_type"],"p_kind": Database["public"]['Enums']["entry_kind"],"p_no_cost": boolean,"p_party": string,"p_person": string,"p_principal": number,"p_rate_bps": number,"p_rows": Json,"p_start": string,"p_title": string }; Returns: {
+{ Args: { "p_account": string,"p_category": string,"p_down": number,"p_id": string,"p_interest": Database["public"]['Enums']["interest_type"],"p_kind": Database["public"]['Enums']["entry_kind"],"p_no_cost": boolean,"p_party": string,"p_person": string,"p_principal": number,"p_rate_bps": number,"p_rows": Json,"p_source"?: string,"p_start": string,"p_title": string }; Returns: {
               "category_id": string | null,
 "created_at": string | null,
 "direction": Database["public"]['Enums']["entry_dir"],
@@ -427,6 +433,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"delete_transaction":
+{ Args: { "p_id": string }; Returns: Json
+                           },
 "filter_transactions":
 { Args: { "p_filters": Json }; Returns: {
               "account_id": string | null,
@@ -637,6 +646,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"quick_add_with_others":
+{ Args: { "p_account": string,"p_amount": number,"p_category"?: string,"p_date": string,"p_id": string,"p_notes"?: string,"p_others"?: Json,"p_place"?: string,"p_tags"?: (string)[],"p_title"?: string }; Returns: Json
+                           },
 "record_payment":
 { Args: { "p_account": string,"p_amount": number,"p_entry": string,"p_id": string,"p_mode"?: Database["public"]['Enums']["pay_mode"],"p_note"?: string,"p_paid_on": string,"p_target_seq"?: number }; Returns: {
               "category_id": string | null,
@@ -670,7 +682,7 @@ isOneToOne: false
       } },
 "search_transactions":
 { Args: { "p_cursor"?: Json,"p_filters"?: Json,"p_limit"?: number }; Returns: {
-              "account_id": string,"account_name": string,"amount_paise": number,"category_color": string,"category_icon": string,"category_id": string,"category_name": string,"created_at": string,"date": string,"entry_id": string,"for_other_paise": number,"id": string,"kind": Database["public"]['Enums']["txn_kind"],"notes": string,"place": string,"tags": (string)[],"title": string,"to_account_id": string,"to_account_name": string
+              "account_id": string,"account_name": string,"amount_paise": number,"category_color": string,"category_icon": string,"category_id": string,"category_name": string,"created_at": string,"date": string,"entry_id": string,"for_other_paise": number,"id": string,"kind": Database["public"]['Enums']["txn_kind"],"notes": string,"others": Json,"place": string,"tags": (string)[],"title": string,"to_account_id": string,"to_account_name": string
             }[]
                            },
 "title_suggestions":
@@ -708,7 +720,10 @@ isOneToOne: false
         to: "entries"
         isOneToOne: true
         isSetofReturn: false
-      } }
+      } },
+"update_expense_for_others":
+{ Args: { "p_id": string,"p_others"?: Json,"p_patch": Json }; Returns: Json
+                           }
           }
           Enums: {
             "account_type": "cash"|"bank"|"upi"|"credit_card"|"wallet","entry_dir": "receive"|"pay","entry_kind": "lent"|"on_behalf"|"borrowed"|"emi_purchase"|"instalment","entry_status": "open"|"settled"|"cancelled","interest_type": "none"|"flat"|"simple"|"reducing","pay_mode": "cash"|"upi"|"bank"|"card"|"other","txn_kind": "expense"|"income"|"transfer"|"debt_out"|"debt_in"
