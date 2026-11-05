@@ -307,11 +307,23 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "_plan_replace":
+            "_calendar_items":
+{ Args: { "p_from": string,"p_to": string }; Returns: Json
+                           },
+"_calendar_notes":
+{ Args: { "p_from": string,"p_to": string }; Returns: Json
+                           },
+"_plan_replace":
 { Args: { "p_action": string,"p_base": Json,"p_entry": string,"p_extra": number,"p_rows": Json }; Returns: undefined
                            },
 "activity_summary":
 { Args: { "p_filters"?: Json }; Returns: Json
+                           },
+"calendar_agenda":
+{ Args: { "p_from": string,"p_to": string,"p_today": string }; Returns: Json
+                           },
+"calendar_month":
+{ Args: { "p_filters"?: Json,"p_month": string,"p_today": string }; Returns: Json
                            },
 "create_entry":
 { Args: { "p_account": string,"p_amount": number,"p_due"?: string,"p_id": string,"p_interest"?: Database["public"]['Enums']["interest_type"],"p_kind": Database["public"]['Enums']["entry_kind"],"p_notes"?: string,"p_person": string,"p_rate_bps"?: number,"p_start": string,"p_title": string }; Returns: {
