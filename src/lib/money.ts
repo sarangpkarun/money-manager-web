@@ -153,3 +153,12 @@ export function mulDiv(a: number, b: number, c: number): Paise {
   const r = divRound(BigInt(a) * BigInt(b), BigInt(c))
   return assertPaise(Number(r))
 }
+
+/** Paise as an editable rupee string: 123450 -> "1234.5", 123400 -> "1234", -50 -> "-0.5". Inverse of parseRupees. */
+export function toRupeeInput(paise: Paise): string {
+  assertPaise(paise)
+  const abs = Math.abs(paise)
+  const rem = abs % 100
+  const frac = rem === 0 ? '' : `.${String(rem).padStart(2, '0').replace(/0$/, '')}`
+  return `${paise < 0 ? '-' : ''}${Math.floor(abs / 100)}${frac}`
+}

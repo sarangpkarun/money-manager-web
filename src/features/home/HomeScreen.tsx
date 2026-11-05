@@ -1,4 +1,5 @@
 import PushSpike from '@/features/profile/PushSpike'
+import { Link } from 'react-router-dom'
 import { EmptyState } from '@/ui/EmptyState'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useProfile } from '@/features/profile/useProfile'
@@ -10,7 +11,12 @@ export default function HomeScreen() {
   const { pref, setPref } = useTheme()
   return (
     <div>
-      <h1 className="px-4 pt-6 text-3xl font-bold">Hello{profile?.name ? `, ${profile.name}` : ''}</h1>
+      <div className="flex items-center justify-between px-4 pt-6">
+        <h1 className="text-3xl font-bold">Hello{profile?.name ? `, ${profile.name}` : ''}</h1>
+        <Link to="/settings" aria-label="Settings" className="flex h-11 w-11 items-center justify-center rounded-full bg-accent font-semibold text-white">
+          {(profile?.name ?? '?').slice(0, 1).toUpperCase()}
+        </Link>
+      </div>
       <EmptyState title="Your dashboard is coming" hint="Add your first expense with the + button once Quick Add lands." />
       <div className="mx-4 space-y-3 rounded-2xl bg-surface p-4">
         <label className="flex items-center justify-between">

@@ -1,6 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { assertPaise, formatMoney, groupDigits, mulDiv, parseAmountExpression, parseRupees } from './money'
+import { assertPaise, formatMoney, groupDigits, mulDiv, parseAmountExpression, parseRupees, toRupeeInput } from './money'
 
 describe('assertPaise', () => {
   it('accepts integers, rejects fractions and unsafe values', () => {
@@ -109,5 +109,19 @@ describe('mulDiv', () => {
     expect(() => mulDiv(1, -1, 1)).toThrow(RangeError)
     expect(() => mulDiv(1, 1, 0)).toThrow(RangeError)
     expect(() => mulDiv(1, 1.5, 1)).toThrow(RangeError)
+  })
+})
+
+describe('toRupeeInput', () => {
+  it('formats for editing', () => {
+    expect(toRupeeInput(123450)).toBe('1234.5')
+    expect(toRupeeInput(123400)).toBe('1234')
+    expect(toRupeeInput(5)).toBe('0.05')
+    expect(toRupeeInput(0)).toBe('0')
+    expect(toRupeeInput(-50)).toBe('-0.5')
+    expect(toRupeeInput(-123456)).toBe('-1234.56')
+  })
+  it('round-trips with parseRupees', () => {
+    fc.assert(fc.property(fc.integer({ min: -1e12, max: 1e12 }), (p) => parseRupees(toRupeeInput(p)) === p))
   })
 })

@@ -23,7 +23,7 @@ function Item({ t }: { t: Toast }) {
 export function Toaster() {
   const toasts = useToasts((s) => s.toasts)
   return (
-    <div className="pointer-events-none fixed inset-x-0 z-40 flex flex-col gap-2 px-4"
+    <div className="pointer-events-none fixed inset-x-0 z-[70] flex flex-col gap-2 px-4"
          style={{ bottom: 'calc(72px + env(safe-area-inset-bottom))' }} aria-live="polite">
       {toasts.map((t) => <Item key={t.id} t={t} />)}
     </div>

@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Toaster } from '@/ui/Toaster'
 import { useUi } from '@/lib/uiStore'
 import HomeScreen from '@/features/home/HomeScreen'
 
 const CalendarScreen = lazy(() => import('@/features/calendar/CalendarScreen'))
 const ActivityScreen = lazy(() => import('@/features/activity/ActivityScreen'))
 const MoneyScreen = lazy(() => import('@/features/money/MoneyScreen'))
+const SettingsRoutes = lazy(() => import('@/features/settings/SettingsRoutes'))
 const loadQuickAdd = () => import('@/features/quick-add/QuickAddSheet')
 const QuickAddSheet = lazy(loadQuickAdd)
 
@@ -89,7 +91,8 @@ export function Shell() {
   // Derived state: adjust during render (React-recommended) so a newly visited tab mounts immediately.
   if (tab && !visited.has(tab)) setVisited(new Set(visited).add(tab))
 
-  if (!tab) return <Navigate to="/" replace />
+  const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
+  if (!tab && !inSettings) return <Navigate to="/" replace />
 
   return (
     <div className="fixed inset-0 bg-bg">
@@ -113,7 +116,9 @@ export function Shell() {
         <TabLink tab="money" active={tab === 'money'} />
       </nav>
 
+      {inSettings && <Suspense fallback={null}><SettingsRoutes /></Suspense>}
       <Suspense fallback={null}>{(quickAddOpen || sheetWarm) && <QuickAddSheet />}</Suspense>
+      <Toaster />
     </div>
   )
 }
