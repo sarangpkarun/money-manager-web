@@ -455,3 +455,18 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 - [ ] `supabase db push` for `20260105000001_plans.sql` (after your approval), then try an EMI and a plan on the deployed app.
 - [ ] On-device iPhone check of the plan form, the entry screen rows and Home cards.
 - [ ] Stage 5B (Calendar, day sheet, notes/tasks, repeat rules) and the blue ✓ marker acceptance for scenario B come next.
+
+## Phase 5B status (updated 2026-11-06): Calendar, notes and tasks
+
+**Built and verified locally:** migration `20260106000001_calendar.sql` (`calendar_month` returns totals, per-day spend, plan rows due or paid in the month, up to 25 spending rows per day with the true count, and notes/tasks in one call; `calendar_agenda` for 30-day windows; indexes on `schedule_items.paid_on` and `notes.date`); Calendar tab (month grid with up to 3 markers per day, compact day spend, totals strip with overdue, layer chips Dues / Spending / Notes, month arrows shared with Home and Activity, filter button for the Spending layer, Month | Agenda switch); day sheet from the cached payload (Due with Pay / Receive, Paid with early/late label and the other date, Spending & income, Notes & tasks with checkbox, Add transaction with the date pre-filled, Add note / task); Agenda (dated items only, Today anchor, loads both ways); notes/tasks with repeat rules (daily, weekly, monthly, yearly, every N units) where ticking a repeating task moves it to its next date with Undo; the current month is prefetched when idle.
+
+**Numbers:** 558 unit/component tests, 165 SQL/RLS tests, 19 Playwright e2e tests, coverage 99.7% lines on `src/lib`. Scenario B (blue ✓ on both the due date and the paid date) and scenario D (amber ✓ "paid late" on both dates, earlier unpaid rows red) pass in the real grid. `calendar_month` takes about 40 ms with 5,000 transactions and 500 plans (~500 plan rows a month); an extreme 24,000-plan-row dataset (2,000 plans due every month) takes 120 to 170 ms because the payload itself grows (~0.2 KB per plan row), so a real month stays far below that. Cold reload with the request held for 4 s still paints the cached calendar (about 750 ms in the dev build including page load), one request. Initial JS 186.5 KB gz (budget 200); the Calendar, day sheet, notes and agenda are a lazy chunk.
+
+**Decisions:** markers are derived in TypeScript from row data; filters affect Spending and totals only; no swipe between months (arrows); the day sheet closes while another sheet is open (no nested bottom sheets); ticking a repeating task moves it instead of marking it done.
+
+**Not done / needs you:**
+- [ ] `supabase db push` for `20260106000001_calendar.sql` (after your approval), then try the Calendar on the deployed app.
+- [ ] On-device iPhone check of the Calendar (cell size and markers, day sheet, Agenda scrolling) and Phases 1 to 5 together.
+- [ ] Earlier open items: Phase 0 viewport gap, push spike, Supabase redirect URLs; Phases 1 to 5 are not pushed to GitHub.
+
+**Known limits:** `remind_at` on notes is unused until Phase 7 (reminders); one e2e test (loan transaction in Activity) failed once in a full run and passed in two re-runs, cause not found; Agenda does not list spending.
