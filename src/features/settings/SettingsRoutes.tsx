@@ -1,11 +1,16 @@
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { useAuth } from '@/features/auth/AuthProvider'
+import PushSpike from '@/features/profile/PushSpike'
+import { useTheme, type ThemePref } from '@/lib/theme'
 import { PageHeader } from '@/ui/PageHeader'
 
 const AccountsScreen = lazy(() => import('./AccountsScreen'))
 const CategoriesScreen = lazy(() => import('./CategoriesScreen'))
 
 function SettingsHome() {
+  const { signOut } = useAuth()
+  const { pref, setPref } = useTheme()
   const item = 'flex min-h-14 items-center justify-between rounded-2xl bg-surface px-4'
   return (
     <div>
@@ -13,7 +18,17 @@ function SettingsHome() {
       <nav className="space-y-3 px-4 pb-8" aria-label="Settings">
         <Link to="/settings/accounts" className={item}>Accounts <span aria-hidden className="text-muted">›</span></Link>
         <Link to="/settings/categories" className={item}>Categories <span aria-hidden className="text-muted">›</span></Link>
+        <label className={item}>
+          <span>Theme</span>
+          <select value={pref} onChange={(e) => setPref(e.target.value as ThemePref)} className="h-11 rounded-lg border border-line bg-surface-2 px-2">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <button onClick={() => void signOut()} className={`${item} w-full text-money-red`}>Log out</button>
       </nav>
+      <PushSpike />
     </div>
   )
 }

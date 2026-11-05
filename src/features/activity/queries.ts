@@ -82,7 +82,7 @@ export function useTitleSuggestions(prefix: string) {
 function useRefreshAll() {
   const qc = useQueryClient()
   return () =>
-    Promise.all([qk.activity, ['activity-summary'], qk.balances, qk.recent, ['title-suggestions']].map((queryKey) => qc.invalidateQueries({ queryKey })))
+    Promise.all([qk.activity, ['activity-summary'], qk.dashboardAll, qk.balances, qk.recent, ['title-suggestions']].map((queryKey) => qc.invalidateQueries({ queryKey })))
 }
 
 type Snapshots = [readonly unknown[], ListData | undefined][]

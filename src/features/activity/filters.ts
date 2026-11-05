@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import { addDays, endOfMonth, startOfMonth, startOfWeek, isValidDate, addMonths, type DateStr } from '@/lib/dates'
 
 export const DATE_PRESETS = ['today', 'week', 'month', 'last_month', 'year', 'custom'] as const
@@ -23,24 +22,28 @@ export interface ActivityFilters {
   tag?: string
 }
 
-const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-const csv = z.string().transform((s) => s.split(',').filter(Boolean))
-const kindList = csv.pipe(z.array(z.enum(UI_KINDS)).min(1))
-const uuidList = csv.pipe(z.array(uuid).min(1))
-const text = z.string().trim().min(1).max(100)
-const paise = z.string().regex(/^\d{1,15}$/).transform(Number)
-const date = z.string().refine(isValidDate)
+// Plain validators rather than zod: this file is on Home's path and zod would add ~50 KB gz to the initial bundle.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+type Parser<T> = (v: string) => T | undefined
+const list = <T,>(ok: (x: string) => boolean): Parser<T[]> => (v) => {
+  const items = v.split(',').filter(Boolean)
+  return items.length > 0 && items.every(ok) ? (items as T[]) : undefined
+}
+const kindList = list<UiKind>((x) => (UI_KINDS as readonly string[]).includes(x))
+const uuidList = list<string>((x) => UUID.test(x))
+const text: Parser<string> = (v) => { const t = v.trim(); return t.length >= 1 && t.length <= 100 ? t : undefined }
+const paise: Parser<number> = (v) => (/^\d{1,15}$/.test(v) ? Number(v) : undefined)
+const date: Parser<string> = (v) => (isValidDate(v) ? v : undefined)
+const presetP: Parser<DatePreset> = (v) => ((DATE_PRESETS as readonly string[]).includes(v) ? (v as DatePreset) : undefined)
 
 /** Reads filters from the URL; anything invalid is dropped rather than failing. */
 export function parseFilters(sp: URLSearchParams): ActivityFilters {
-  const pick = <T,>(key: string, schema: z.ZodType<T>): T | undefined => {
+  const pick = <T,>(key: string, parse: Parser<T>): T | undefined => {
     const v = sp.get(key)
-    if (v === null) return undefined
-    const r = schema.safeParse(v)
-    return r.success ? r.data : undefined
+    return v === null ? undefined : parse(v)
   }
   const out: ActivityFilters = {
-    preset: pick('d', z.enum(DATE_PRESETS)),
+    preset: pick('d', presetP),
     from: pick('from', date),
     to: pick('to', date),
     kinds: pick('type', kindList),

@@ -24,12 +24,14 @@ interface Props {
   filters: ActivityFilters
   accounts: Account[]
   categories: Category[]
+  /** Home: the month switcher owns the date, so the sheet leaves the date section out. */
+  hideDate?: boolean
   onApply: (f: ActivityFilters) => void
   onClose: () => void
 }
 
 /** Reusable filter sheet. Edits a draft; nothing changes until Apply. Search text lives outside (it is kept as is). */
-export function FilterSheet({ filters, accounts, categories, onApply, onClose }: Props) {
+export function FilterSheet({ filters, accounts, categories, hideDate = false, onApply, onClose }: Props) {
   const [draft, setDraft] = useState<FilterDraft>(() => filtersToDraft(filters))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const set = <K extends keyof FilterDraft>(k: K, v: FilterDraft[K]) => setDraft((d) => ({ ...d, [k]: v }))
@@ -48,10 +50,12 @@ export function FilterSheet({ filters, accounts, categories, onApply, onClose }:
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()} title="Filters">
       <div className="space-y-5 pb-2">
-        <Group title="Date">
-          {PRESETS.map((p) => <Chip key={p.value || 'month'} selected={draft.preset === p.value} onClick={() => set('preset', p.value)}>{p.label}</Chip>)}
-        </Group>
-        {draft.preset === 'custom' && (
+        {!hideDate && (
+          <Group title="Date">
+            {PRESETS.map((p) => <Chip key={p.value || 'month'} selected={draft.preset === p.value} onClick={() => set('preset', p.value)}>{p.label}</Chip>)}
+          </Group>
+        )}
+        {!hideDate && draft.preset === 'custom' && (
           <div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="From"><input type="date" className={inputCls} value={draft.from} onChange={(e) => set('from', e.target.value)} /></Field>

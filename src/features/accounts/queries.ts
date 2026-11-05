@@ -31,7 +31,7 @@ export function useAccountBalances() {
 
 function useInvalidateAccounts() {
   const qc = useQueryClient()
-  return () => Promise.all([qc.invalidateQueries({ queryKey: qk.accounts }), qc.invalidateQueries({ queryKey: qk.balances })])
+  return () => Promise.all([qc.invalidateQueries({ queryKey: qk.accounts }), qc.invalidateQueries({ queryKey: qk.balances }), qc.invalidateQueries({ queryKey: qk.dashboardAll })])
 }
 
 export function useSaveAccount() {

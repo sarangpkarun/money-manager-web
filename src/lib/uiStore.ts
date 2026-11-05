@@ -19,6 +19,9 @@ interface UiState {
   /** Last Activity query string (with leading ?) so the tab restores its filters when you come back. */
   activitySearch: string
   setActivitySearch: (s: string) => void
+  /** Home's own filter query string (the Home tab stays mounted, so it is remembered here too). */
+  homeSearch: string
+  setHomeSearch: (s: string) => void
   /** Opens Quick Add, optionally pre-filled (e.g. a calendar day, or "add another"). */
   openQuickAdd: (prefill?: QuickAddPrefill) => void
 }
@@ -31,6 +34,8 @@ export const useUi = create<UiState>((set) => ({
   quickAddPrefill: null,
   activitySearch: '',
   setActivitySearch: (activitySearch) => set({ activitySearch }),
+  homeSearch: '',
+  setHomeSearch: (homeSearch) => set({ homeSearch }),
   setQuickAddOpen: (quickAddOpen) => set(quickAddOpen ? { quickAddOpen } : { quickAddOpen, quickAddPrefill: null }),
   openQuickAdd: (prefill) => set({ quickAddOpen: true, quickAddPrefill: prefill ?? null }),
 }))
