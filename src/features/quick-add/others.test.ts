@@ -33,7 +33,7 @@ describe('validateOthers', () => {
   it('one friend, the full amount', () => {
     const r = ok(validateOthers(30_000, [row({ amount: '300' })], people, '2026-11-10'))
     expect(r.owed).toBe(30_000)
-    expect(r.items).toEqual([{ key: 'k1', personId: 'arun', personName: 'Arun', amount_paise: 30_000, due_date: null, rows: null }])
+    expect(r.items).toEqual([{ key: 'k1', entryId: null, personId: 'arun', personName: 'Arun', amount_paise: 30_000, due_date: null, rows: null }])
   })
   it('three-way split reconciles to the bill; shares can also be less than the bill (partial)', () => {
     const rows = [row({ key: 'a', amount: '100' }), row({ key: 'b', personText: 'Meera', amount: '100' }), row({ key: 'c', personText: 'Ravi Kumar', amount: '100' })]

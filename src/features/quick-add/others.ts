@@ -18,9 +18,11 @@ export interface OtherRow {
   due: string
   /** a repayment plan instead of one due date */
   plan: PlanFormState | null
+  /** edit mode: the existing entry of this friend */
+  entryId?: string | null
 }
 
-export const newOtherRow = (key: string, personText = '', personId: string | null = null, amount = ''): OtherRow => ({ key, personText, personId, amount, due: '', plan: null })
+export const newOtherRow = (key: string, personText = '', personId: string | null = null, amount = '', entryId: string | null = null): OtherRow => ({ key, personText, personId, amount, due: '', plan: null, entryId })
 
 /** Equal shares of the bill for `n` friends (the last takes the rounding), in paise. */
 export const equalShares = (total: number, n: number): number[] => (n <= 0 || total <= 0 ? [] : splitEqual(total, n))
@@ -30,6 +32,7 @@ export const myShare = (total: number | null, owed: number): number | null => (t
 
 export interface OtherItem {
   key: string
+  entryId: string | null
   personId: string | null
   personName: string
   amount_paise: number
@@ -68,7 +71,7 @@ export function validateOthers(total: number | null, rows: OtherRow[], people: P
       planRows = rowsPayload(pv.preview.rows)
     }
     owed += paise
-    items.push({ key: r.key, personId: existing, personName: name, amount_paise: paise, due_date: planRows ? null : r.due || null, rows: planRows })
+    items.push({ key: r.key, entryId: r.entryId ?? null, personId: existing, personName: name, amount_paise: paise, due_date: planRows ? null : r.due || null, rows: planRows })
   }
   if (total !== null && owed > total) errors.form = `That is ${formatMoney(owed - total)} more than the bill`
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, items, owed }
@@ -88,4 +91,12 @@ export function othersPayload(items: OtherItem[], ids: Record<string, string>) {
 export function suggestFor(people: PersonLike[], rows: OtherRow[], row: OtherRow, limit = 6): PersonLike[] {
   const taken = new Set(rows.filter((r) => r.key !== row.key && r.personId).map((r) => r.personId))
   return matchPeople(people.filter((p) => !taken.has(p.id)), row.personText, limit)
+}
+
+/** The `p_others` list when editing a purchase: existing friends keep their entry id. */
+export function editOthersPayload(items: OtherItem[], ids: Record<string, string>) {
+  return items.map((i) => ({
+    ...(i.entryId ? { entry_id: i.entryId } : {}), person_id: i.personId ?? ids[i.key]!, amount_paise: i.amount_paise,
+    ...(i.entryId ? {} : i.due_date ? { due_date: i.due_date } : {}),
+  }))
 }

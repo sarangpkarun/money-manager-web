@@ -3,6 +3,7 @@ import { useAccounts } from '@/features/accounts/queries'
 import { useAddTransaction, useDeleteTransaction, useRecentTransactions, useTitleSuggestions, useUpdateTransaction, type TitleSuggestion } from '@/features/activity/queries'
 import { useCategories } from '@/features/categories/queries'
 import { normaliseName, matchPeople } from '@/features/money/people'
+import { useAddExpenseForOthers, useDeleteTransactionWithOthers, useUpdateExpenseForOthers } from '@/features/activity/othersQueries'
 import { PlanFields } from '@/features/money/plan/PlanFields'
 import { emptyPlanForm, formToSpec, previewFor, type PlanFormState } from '@/features/money/plan/planForm'
 import { useCreateEntry, useCreatePlan, useDeleteEntry, usePeople, useSavePerson } from '@/features/money/queries'
@@ -19,6 +20,9 @@ import { useToasts } from '@/ui/toastStore'
 import { evaluateAmount } from './amount'
 import { pickDefaultAccount, rankCategories } from './suggest'
 import { lendPreview, validateLend, type LendInterest } from './lend'
+import { OthersFields } from './OthersFields'
+import { PersonField } from './PersonField'
+import { editOthersPayload, newOtherRow, othersPayload, validateOthers, type OtherRow } from './others'
 import { isLend, validateQuickAdd, type QuickAddForm, type QuickKind } from './validate'
 
 const NONE: never[] = [] // stable empty list so memoised values do not change every render
@@ -56,6 +60,9 @@ function QuickAddForm() {
   const setEmiOpen = useUi((s) => s.setEmiOpen)
   const deleteEntry = useDeleteEntry()
   const savePerson = useSavePerson()
+  const addForOthers = useAddExpenseForOthers()
+  const delWithOthers = useDeleteTransactionWithOthers()
+  const updateForOthers = useUpdateExpenseForOthers()
   const allPeople = usePeople().data ?? NONE
   const people = useMemo(() => allPeople.filter((p) => !p.archived), [allPeople])
   const toast = useToasts.getState
@@ -66,8 +73,15 @@ function QuickAddForm() {
       date: prefill?.date ?? today, place: '', notes: '', tags: '',
     })
   const [lend, setLend] = useState({ personText: '', personId: prefill?.personId ?? (null as string | null), due: '', interest: 'none' as LendInterest, rate: '' })
-  const [personFocused, setPersonFocused] = useState(false)
   const [plan, setPlan] = useState<PlanFormState | null>(null)
+  // "For someone else": null = off. Edit mode starts with the friends this purchase already has.
+  const [others, setOthers] = useState<OtherRow[] | null>(() =>
+    editing?.others?.length ? editing.others.map((o) => newOtherRow(o.entry_id, o.person_name ?? '', o.person_id, String(o.amount_paise / 100), o.entry_id)) : null)
+  const [otherErrors, setOtherErrors] = useState<Record<string, string>>({})
+  const paidByKey = useMemo(
+    () => Object.fromEntries((editing?.others ?? []).filter((o) => o.amount_paise - o.pending_paise > 0).map((o) => [o.entry_id, o.amount_paise - o.pending_paise])),
+    [editing],
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [titleFocused, setTitleFocused] = useState(false)
   const [more, setMore] = useState({ place: !!(editing?.place), notes: !!(editing?.notes), tags: !!(editing?.tags?.length) })
@@ -144,11 +158,53 @@ function QuickAddForm() {
     }
   }
 
+  /** A purchase with friends: the friends' rows are checked, new people created, then everything is saved in one step. */
+  const submitOthers = async (input: Extract<ReturnType<typeof validateQuickAdd>, { ok: true }>['input']) => {
+    const rows = (others ?? []).map((r, _i, all) => (all.length === 1 && !r.amount.trim() ? { ...r, amount: form.amount } : r))
+    const v = validateOthers(input.amount_paise, rows, people, form.date)
+    if (!v.ok) return setOtherErrors(v.errors)
+    setOtherErrors({})
+    try {
+      const ids: Record<string, string> = {}
+      for (const item of v.items) if (!item.personId) ids[item.key] = (await savePerson.mutateAsync({ values: { name: item.personName } })).id
+      const names = v.items.map((i) => i.personName).join(', ')
+      const label = `${formatMoney(input.amount_paise)} · for ${names}`
+      if (editing) {
+        setQuickAddOpen(false)
+        updateForOthers.mutate({
+          id: editing.id,
+          patch: { title: input.title, place: input.place, notes: input.notes, tags: input.tags, category_id: input.category_id, date: input.date, account_id: input.account_id, amount_paise: input.amount_paise },
+          others: editOthersPayload(v.items, ids),
+        }, {
+          onSuccess: () => toast().show({ message: `Updated ${label}` }),
+          onError: (e) => toast().show({ message: `Couldn't update: ${(e as Error).message}`, duration: 8000 }),
+        })
+        return
+      }
+      writeLast(input.account_id)
+      const id = crypto.randomUUID()
+      const saved = addForOthers.mutateAsync({ id, amount_paise: input.amount_paise, date: input.date, account_id: input.account_id, category_id: input.category_id, title: input.title,
+        place: input.place, notes: input.notes, tags: input.tags, others: othersPayload(v.items, ids) })
+      setQuickAddOpen(false)
+      toast().show({
+        message: `Added ${label}`,
+        actions: [
+          { label: 'Undo', run: () => void saved.then(() => delWithOthers.mutateAsync(id)).catch(() => undefined) },
+          { label: 'Add another', run: () => openQuickAdd({ kind: 'expense', accountId: input.account_id, date: input.date }) },
+        ],
+      })
+      saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${e.message}`, duration: 8000 }))
+    } catch (e) {
+      setOtherErrors({ form: (e as Error).message })
+    }
+  }
+
   const submit = async () => {
     if (lending) return submitLend()
     const r = validateQuickAdd({ ...form, accountId })
     if (!r.ok) return setErrors(r.errors)
     setErrors({})
+    if (others !== null && r.input.kind === 'expense') return submitOthers(r.input)
     const catName = categories.find((c) => c.id === r.input.category_id)?.name
     const label = `${formatMoney(r.input.amount_paise)}${catName ? ` · ${catName}` : ''}`
 
@@ -213,26 +269,9 @@ function QuickAddForm() {
       </div>
 
       {lending && (
-        <div className="relative">
-          <input aria-label="Person" placeholder={form.kind === 'lent' ? 'Lent to…' : 'Borrowed from…'} value={personText} autoComplete="off"
-                 onChange={(e) => setLend((l) => ({ ...l, personText: e.target.value, personId: null }))}
-                 onFocus={() => setPersonFocused(true)} onBlur={() => setTimeout(() => setPersonFocused(false), 150)} className={inputCls} />
-          {personFocused && (personMatches.length > 0 || personText.trim()) && (
-            <ul role="listbox" aria-label="People" className="absolute inset-x-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg">
-              {personMatches.filter((p) => p.id !== lend.personId).map((p) => (
-                <li key={p.id}>
-                  <button type="button" role="option" aria-selected={false} onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => { setLend((l) => ({ ...l, personText: p.name, personId: p.id })); setPersonFocused(false) }}
-                          className="flex min-h-11 w-full items-center px-3 text-left">{p.name}</button>
-                </li>
-              ))}
-              {personText.trim() && !people.some((p) => normaliseName(p.name) === normaliseName(personText)) && (
-                <li><div className="flex min-h-11 items-center px-3 text-sm text-muted">New person “{personText.trim()}” will be added</div></li>
-              )}
-            </ul>
-          )}
-          {errors.person && <p role="alert" className="mt-1 text-sm text-money-red">{errors.person}</p>}
-        </div>
+        <PersonField label="Person" placeholder={form.kind === 'lent' ? 'Lent to…' : 'Borrowed from…'} text={personText} selectedId={lend.personId}
+                     people={people} suggestions={personMatches} error={errors.person}
+                     onChange={(text, id) => setLend((l) => ({ ...l, personText: text, personId: id }))} />
       )}
 
       <div className="relative">
@@ -303,11 +342,18 @@ function QuickAddForm() {
           </label>
         )}
         {lending && !plan && lend.due && <Chip onClick={() => setLend((l) => ({ ...l, due: '' }))}>Clear due date</Chip>}
+        {form.kind === 'expense' && !editing?.others?.length && (
+          <Chip selected={others !== null} onClick={() => setOthers(others === null ? [newOtherRow('o0')] : null)}>For someone else</Chip>
+        )}
         {!lending && !more.place && <Chip onClick={() => setMore((m) => ({ ...m, place: true }))}>+ Place</Chip>}
         {!more.notes && <Chip onClick={() => setMore((m) => ({ ...m, notes: true }))}>+ Note</Chip>}
         {!lending && !more.tags && <Chip onClick={() => setMore((m) => ({ ...m, tags: true }))}>+ Tags</Chip>}
       </div>
       {errors.due && <p role="alert" className="text-sm text-money-red">{errors.due}</p>}
+
+      {form.kind === 'expense' && others !== null && (
+        <OthersFields rows={others} onChange={setOthers} bill={amount.paise} people={people} today={today} errors={otherErrors} blocked={Object.keys(paidByKey).length ? paidByKey : undefined} />
+      )}
 
  {lending && (
         <Chip selected={!!plan} onClick={() => setPlan(plan ? null : emptyPlanForm(today))}>Repay in instalments</Chip>

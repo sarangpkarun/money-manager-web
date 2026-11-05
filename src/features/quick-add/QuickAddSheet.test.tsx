@@ -8,6 +8,7 @@ import { useToasts } from '@/ui/toastStore'
 const m = vi.hoisted(() => ({
   add: vi.fn(), update: vi.fn(), del: vi.fn(), suggestions: { data: [] as unknown[] },
   createEntry: vi.fn(), deleteEntry: vi.fn(), savePerson: vi.fn(), createPlan: vi.fn(),
+  addOthers: vi.fn(), delOthers: vi.fn(), updOthers: vi.fn(),
 }))
 
 const accounts = [
@@ -42,6 +43,12 @@ vi.mock('@/features/money/queries', () => ({
   useSavePerson: () => ({ mutateAsync: m.savePerson }),
 }))
 
+vi.mock('@/features/activity/othersQueries', () => ({
+  useAddExpenseForOthers: () => ({ mutateAsync: m.addOthers }),
+  useDeleteTransactionWithOthers: () => ({ mutateAsync: m.delOthers }),
+  useUpdateExpenseForOthers: () => ({ mutate: m.updOthers }),
+}))
+
 import QuickAddSheet from './QuickAddSheet'
 
 beforeAll(() => {
@@ -59,6 +66,9 @@ beforeEach(() => {
   m.del.mockResolvedValue({})
   m.createEntry.mockResolvedValue({})
   m.createPlan.mockResolvedValue({})
+  m.addOthers.mockResolvedValue({ txn: {}, entries: [] })
+  m.delOthers.mockResolvedValue({})
+  m.updOthers.mockImplementation((_v, opts) => opts?.onSuccess?.())
   m.deleteEntry.mockResolvedValue({})
   m.savePerson.mockResolvedValue({ id: 'new-person' })
   m.suggestions = { data: [] }
@@ -406,6 +416,141 @@ describe('Repay in instalments / EMI chip', () => {
     const { user, dialog } = await open()
     await user.click(within(dialog).getByRole('button', { name: /EMI \/ instalments/ }))
     expect(useUi.getState()).toMatchObject({ quickAddOpen: false, emiOpen: true })
+  })
+})
+
+describe('For someone else', () => {
+  it('scenario A: ₹30,000 on the card for one friend defaults to the full amount; saves purchase and friend together', async () => {
+    const { user, dialog } = await open()
+    await user.type(within(dialog).getByLabelText('Amount'), '30000')
+    await user.click(within(dialog).getByRole('button', { name: 'Bank' }))
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    const sec = within(dialog).getByRole('region', { name: 'For someone else' })
+    await user.type(within(sec).getByLabelText('Friend 1'), 'Ravi')
+    await user.click(within(sec).getByRole('option', { name: 'Ravi Kumar' }))
+    expect(within(sec).getByText('Your share ₹0 · they owe ₹30,000')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.add).not.toHaveBeenCalled() // not a plain expense
+    expect(m.addOthers).toHaveBeenCalledOnce()
+    expect(m.addOthers.mock.calls[0]?.[0]).toMatchObject({
+      amount_paise: 3_000_000, account_id: 'bank', date: '2026-11-05', others: [{ person_id: 'ravi', amount_paise: 3_000_000 }],
+    })
+    await waitFor(() => expect(toast()?.message).toBe('Added ₹30,000 · for Ravi Kumar'))
+    const id = m.addOthers.mock.calls[0]?.[0].id
+    act(() => { toast()?.actions[0]?.run() })
+    await waitFor(() => expect(m.delOthers).toHaveBeenCalledWith(id))
+  })
+
+  it('partial: ₹5,000 bill, ₹4,000 for a friend → your share ₹1,000', async () => {
+    const { user, dialog } = await open()
+    await user.type(within(dialog).getByLabelText('Amount'), '5000')
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    const sec = within(dialog).getByRole('region', { name: 'For someone else' })
+    await user.type(within(sec).getByLabelText('Friend 1'), 'meera')
+    await user.type(within(sec).getByLabelText('Amount for friend 1'), '4000')
+    expect(within(sec).getByText('Your share ₹1,000 · they owe ₹4,000')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.addOthers.mock.calls[0]?.[0].others).toEqual([{ person_id: 'meera', amount_paise: 400_000 }])
+    expect(m.savePerson).not.toHaveBeenCalled() // an existing name is reused
+  })
+
+  it('three-way split: adding people splits the bill equally; new names are created first', async () => {
+    const { user, dialog } = await open()
+    await user.type(within(dialog).getByLabelText('Amount'), '900')
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    const sec = within(dialog).getByRole('region', { name: 'For someone else' })
+    await user.click(within(sec).getByRole('button', { name: '+ Add person' }))
+    await user.click(within(sec).getByRole('button', { name: '+ Add person' }))
+    expect(within(sec).getByLabelText('Amount for friend 1')).toHaveValue('300')
+    expect(within(sec).getByLabelText('Amount for friend 3')).toHaveValue('300')
+    await user.type(within(sec).getByLabelText('Friend 1'), 'Ravi Kumar')
+    await user.type(within(sec).getByLabelText('Friend 2'), 'Meera')
+    await user.type(within(sec).getByLabelText('Friend 3'), 'Priya')
+    m.savePerson.mockResolvedValueOnce({ id: 'priya-id' })
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.savePerson).toHaveBeenCalledWith({ values: { name: 'Priya' } })
+    const o = m.addOthers.mock.calls[0]?.[0].others as { person_id: string; amount_paise: number }[]
+    expect(o.map((x) => x.person_id)).toEqual(['ravi', 'meera', 'priya-id'])
+    expect(o.reduce((s, x) => s + x.amount_paise, 0)).toBe(90_000)
+  })
+
+  it('refuses more than the bill and a missing person, and saves nothing', async () => {
+    const { user, dialog } = await open()
+    await user.type(within(dialog).getByLabelText('Amount'), '1000')
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    const sec = within(dialog).getByRole('region', { name: 'For someone else' })
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await within(sec).findByText('Who is it for?')).toBeInTheDocument()
+    await user.type(within(sec).getByLabelText('Friend 1'), 'Ravi Kumar')
+    await user.type(within(sec).getByLabelText('Amount for friend 1'), '1500')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await within(sec).findByText('That is ₹500 more than the bill')).toBeInTheDocument()
+    expect(m.addOthers).not.toHaveBeenCalled()
+  })
+
+  it('a friend can repay in instalments (plan rows are sent)', async () => {
+    const { user, dialog } = await open()
+    await user.type(within(dialog).getByLabelText('Amount'), '3000')
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    const sec = within(dialog).getByRole('region', { name: 'For someone else' })
+    await user.type(within(sec).getByLabelText('Friend 1'), 'Ravi Kumar')
+    await user.click(within(sec).getByRole('button', { name: 'In instalments' }))
+    await user.type(within(sec).getByLabelText('Number of months'), '3')
+    fireEvent.change(within(sec).getByLabelText('First instalment'), { target: { value: '2026-12-05' } })
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    const o = m.addOthers.mock.calls[0]?.[0].others[0]
+    expect(o.rows).toHaveLength(3)
+    expect(o.rows.reduce((s: number, r: { due_paise: number }) => s + r.due_paise, 0)).toBe(300_000)
+    expect(o.due_date).toBeUndefined()
+  })
+
+  it('the chip is only on Spent; turning it off returns to a plain expense', async () => {
+    const { user, dialog } = await open()
+    await user.click(within(dialog).getByRole('radio', { name: 'Received' }))
+    expect(within(dialog).queryByRole('button', { name: 'For someone else' })).toBeNull()
+    await user.click(within(dialog).getByRole('radio', { name: 'Spent' }))
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    await user.click(within(dialog).getByRole('button', { name: 'For someone else' }))
+    expect(within(dialog).queryByRole('region', { name: 'For someone else' })).toBeNull()
+    await user.type(within(dialog).getByLabelText('Amount'), '10')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.add).toHaveBeenCalled()
+    expect(m.addOthers).not.toHaveBeenCalled()
+  })
+
+  it('editing a purchase with friends: pre-filled, shows what is locked, saves through the purchase update', async () => {
+    const row = {
+      id: 'p1', kind: 'expense', amount_paise: 1_000_000, date: '2026-11-05', account_id: 'cash', account_name: 'Cash', to_account_id: null, to_account_name: null, category_id: 'food', category_name: 'Food',
+      category_icon: null, category_color: null, title: 'Dinner', place: null, notes: null, tags: [], for_other_paise: 600_000, entry_id: null, created_at: '2026-11-05T10:00:00Z',
+      others: [
+        { entry_id: 'e1', person_id: 'ravi', person_name: 'Ravi Kumar', amount_paise: 400_000, pending_paise: 250_000 },
+        { entry_id: 'e2', person_id: 'meera', person_name: 'Meera', amount_paise: 200_000, pending_paise: 200_000 },
+      ],
+    }
+    const { user, dialog } = await open({ edit: row as never })
+    const sec = within(dialog).getByRole('region', { name: 'For someone else' })
+    expect(within(sec).getByLabelText('Friend 1')).toHaveValue('Ravi Kumar')
+    expect(within(sec).getByLabelText('Friend 1')).toBeDisabled() // Ravi has paid ₹1,500: cannot be changed to someone else
+    expect(sec).toHaveTextContent('Already paid ₹1,500')
+    expect(within(sec).getByRole('button', { name: 'Remove friend 1' })).toBeDisabled()
+    expect(within(sec).getByLabelText('Friend 2')).toBeEnabled()
+    expect(within(sec).getByRole('button', { name: 'Remove friend 2' })).toBeEnabled()
+    expect(within(sec).queryByRole('button', { name: 'In instalments' })).toBeNull() // existing friends: change plans from their entry
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    expect(m.updOthers).toHaveBeenCalledOnce()
+    expect(m.updOthers.mock.calls[0]?.[0]).toMatchObject({ id: 'p1', patch: { amount_paise: 1_000_000, title: 'Dinner' } })
+    expect(m.updOthers.mock.calls[0]?.[0].others).toEqual([
+      { entry_id: 'e1', person_id: 'ravi', amount_paise: 400_000 }, { entry_id: 'e2', person_id: 'meera', amount_paise: 200_000 },
+    ])
+  })
+
+  it('a server refusal while editing is shown to the user', async () => {
+    m.updOthers.mockImplementation((_v, opts) => opts?.onError?.(new Error('Ravi has already paid ₹1500')))
+    const row = { id: 'p1', kind: 'expense', amount_paise: 100_000, date: '2026-11-05', account_id: 'cash', category_id: 'food', title: 'X', tags: [], for_other_paise: 50_000, entry_id: null, place: null, notes: null,
+      others: [{ entry_id: 'e1', person_id: 'ravi', person_name: 'Ravi Kumar', amount_paise: 50_000, pending_paise: 50_000 }] }
+    const { user, dialog } = await open({ edit: row as never })
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(toast()?.message).toBe("Couldn't update: Ravi has already paid ₹1500"))
   })
 })
 
