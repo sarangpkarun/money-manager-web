@@ -8,7 +8,7 @@ import type { OverviewEntry } from './types'
 
 const e = (o: Partial<OverviewEntry>): OverviewEntry => ({
   id: 'e', kind: 'lent', direction: 'receive', title: 'Loan', person_id: 'p1', person_name: 'Ravi', principal_paise: 100_000, total_paise: 100_000,
-  paid_paise: 0, outstanding_paise: 100_000, start_date: '2026-11-01', due_date: null, ...o,
+  paid_paise: 0, outstanding_paise: 100_000, start_date: '2026-11-01', overdue_paise: 0, rows_total: 1, rows_paid: 0, due_date: null, ...o,
 })
 
 describe('entryStatusOf', () => {

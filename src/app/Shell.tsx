@@ -12,6 +12,7 @@ const ActivityScreen = lazy(() => import('@/features/activity/ActivityScreen'))
 const MoneyScreen = lazy(() => import('@/features/money/MoneyScreen'))
 const SettingsRoutes = lazy(() => import('@/features/settings/SettingsRoutes'))
 const EntryScreen = lazy(() => import('@/features/money/EntryScreen'))
+const EmiSheet = lazy(() => import('@/features/money/plan/EmiSheet'))
 const loadQuickAdd = () => import('@/features/quick-add/QuickAddSheet')
 const QuickAddSheet = lazy(loadQuickAdd)
 
@@ -92,7 +93,7 @@ function Prefetch() {
 export function Shell() {
   const { pathname } = useLocation()
   const tab = tabForPath(pathname)
-  const { quickAddOpen, openQuickAdd } = useUi()
+  const { quickAddOpen, openQuickAdd, emiOpen, setEmiOpen } = useUi()
   const [sheetWarm, setSheetWarm] = useState(false)
   const [visited, setVisited] = useState<Set<TabKey>>(() => new Set(['home']))
 
@@ -134,6 +135,7 @@ export function Shell() {
       {inSettings && <Suspense fallback={null}><SettingsRoutes /></Suspense>}
       {entryId && <Suspense fallback={null}><EntryScreen key={entryId} id={entryId} /></Suspense>}
       <Suspense fallback={null}>{(quickAddOpen || sheetWarm) && <QuickAddSheet />}</Suspense>
+      <Suspense fallback={null}>{emiOpen && <EmiSheet open onClose={() => setEmiOpen(false)} />}</Suspense>
       <Prefetch />
       <Toaster />
     </div>

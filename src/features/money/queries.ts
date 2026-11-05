@@ -4,6 +4,7 @@ import type { Json } from '@/lib/database.types'
 import { qk } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabase'
 import type { HistoryRow, MoneyOverview, PersonBalance } from './types'
+import type { rowsFull, rowsPayload } from '@/lib/plan'
 
 export function usePeople() {
   return useQuery({
@@ -127,6 +128,8 @@ export interface NewPayment {
   account_id: string
   mode?: PayMode | null
   note?: string | null
+  /** pay this plan row first; the rest flows to the earliest unpaid rows */
+  target_seq?: number | null
 }
 
 export function useRecordPayment() {
@@ -135,7 +138,7 @@ export function useRecordPayment() {
     mutationFn: async (p: NewPayment) => {
       const { data, error } = await supabase.rpc('record_payment', {
         p_id: p.id, p_entry: p.entry_id, p_amount: p.amount_paise, p_paid_on: p.paid_on, p_account: p.account_id,
-        p_mode: p.mode ?? undefined, p_note: p.note ?? undefined,
+        p_mode: p.mode ?? undefined, p_note: p.note ?? undefined, p_target_seq: p.target_seq ?? undefined,
       })
       if (error) throw error
       return data
@@ -144,16 +147,38 @@ export function useRecordPayment() {
   })
 }
 
-/** Resolves with the deleted payment so the caller can offer Undo (record_payment with the same id). */
+export interface DeletedPayment {
+  /** id to record it again with (Undo) */
+  id: string
+  entry_id: string
+  amount_paise: number
+  paid_on: string
+  account_id: string | null
+  mode: PayMode | null
+  note: string | null
+  /** the plan row it was aimed at, when it was a single-row payment (multi-part payments are re-allocated from the earliest row) */
+  target_seq: number | null
+}
+
+/** Deletes the whole cash movement the payment belongs to. Resolves with what is needed to record it again (Undo). */
 export function useDeletePayment() {
   const refresh = useRefreshMoney()
   return useMutation({
-    mutationFn: async (id: string): Promise<Payment> => {
+    mutationFn: async (id: string): Promise<DeletedPayment> => {
       const { data: p, error: e1 } = await supabase.from('payments').select('*').eq('id', id).single()
       if (e1) throw e1
+      let parts: { amount_paise: number; seq: number | null }[] = [{ amount_paise: p.amount_paise, seq: null }]
+      if (p.txn_id) {
+        const { data, error } = await supabase.from('payments').select('amount_paise, schedule_items(seq)').eq('txn_id', p.txn_id)
+        if (error) throw error
+        parts = (data as unknown as { amount_paise: number; schedule_items: { seq: number } | null }[]).map((x) => ({ amount_paise: x.amount_paise, seq: x.schedule_items?.seq ?? null }))
+      }
       const { error } = await supabase.rpc('delete_payment', { p_id: id })
       if (error) throw error
-      return p
+      return {
+        id: p.id, entry_id: p.entry_id, amount_paise: parts.reduce((s, x) => s + x.amount_paise, 0), paid_on: p.paid_on, account_id: p.account_id,
+        mode: p.mode, note: p.note, target_seq: parts.length === 1 ? (parts[0]?.seq ?? null) : null,
+      }
     },
     onSettled: refresh,
   })
@@ -228,6 +253,79 @@ export function useImportPeople() {
       const { error } = await supabase.from('people').insert(rows.map((r) => ({ name: r.name, phone: r.phone })))
       if (error) throw error
       return rows.length
+    },
+    onSettled: refresh,
+  })
+}
+
+export interface NewPlan {
+  id: string
+  kind: 'lent' | 'borrowed' | 'emi_purchase' | 'instalment'
+  person_id: string | null
+  party: string | null
+  title: string
+  principal_paise: number
+  down_paise: number
+  account_id: string
+  category_id: string | null
+  start_date: string
+  interest: 'none' | 'flat' | 'simple' | 'reducing'
+  rate_bps: number
+  no_cost: boolean
+  rows: ReturnType<typeof rowsPayload>
+}
+
+export function useCreatePlan() {
+  const refresh = useRefreshMoney()
+  return useMutation({
+    mutationFn: async (i: NewPlan) => {
+      const { data, error } = await supabase.rpc('create_entry_with_plan', {
+        p_id: i.id, p_kind: i.kind, p_person: (i.person_id ?? undefined) as string, p_party: (i.party ?? undefined) as string, p_title: i.title,
+        p_principal: i.principal_paise, p_down: i.down_paise, p_account: i.account_id, p_category: (i.category_id ?? undefined) as string,
+        p_start: i.start_date, p_interest: i.interest, p_rate_bps: i.rate_bps, p_no_cost: i.no_cost, p_rows: i.rows as Json,
+      })
+      if (error) throw error
+      return data
+    },
+    onSettled: refresh,
+  })
+}
+
+type Rows = ReturnType<typeof rowsFull>
+
+/** Skip month / change amount: base = the rows the screen started from, rows = the new rows. */
+export function usePlanEdit(kind: 'skip' | 'change') {
+  const refresh = useRefreshMoney()
+  return useMutation({
+    mutationFn: async ({ entryId, base, rows }: { entryId: string; base: Rows; rows: Rows }) => {
+      const { error } = await supabase.rpc(kind === 'skip' ? 'plan_skip_month' : 'plan_change_amount', { p_entry: entryId, p_base: base as Json, p_rows: rows as Json })
+      if (error) throw error
+    },
+    onSettled: refresh,
+  })
+}
+
+export interface ExtraPayment {
+  id: string
+  entry_id: string
+  amount_paise: number
+  paid_on: string
+  account_id: string
+  mode?: PayMode | null
+  note?: string | null
+  base: Rows
+  rows: Rows
+}
+
+export function useExtraPayment() {
+  const refresh = useRefreshMoney()
+  return useMutation({
+    mutationFn: async (x: ExtraPayment) => {
+      const { error } = await supabase.rpc('plan_extra_payment', {
+        p_id: x.id, p_entry: x.entry_id, p_amount: x.amount_paise, p_paid_on: x.paid_on, p_account: x.account_id,
+        p_mode: (x.mode ?? undefined) as PayMode, p_note: (x.note ?? undefined) as string, p_base: x.base as Json, p_rows: x.rows as Json,
+      })
+      if (error) throw error
     },
     onSettled: refresh,
   })

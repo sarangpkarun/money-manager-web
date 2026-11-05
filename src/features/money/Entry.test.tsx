@@ -6,6 +6,7 @@ import { useToasts } from '@/ui/toastStore'
 
 const m = vi.hoisted(() => ({
   entry: undefined as unknown, record: vi.fn(), delPayment: vi.fn(), unpaid: vi.fn(), delEntry: vi.fn(), update: vi.fn(),
+  skip: vi.fn(), change: vi.fn(), extra: vi.fn(),
 }))
 
 vi.mock('./queries', () => ({
@@ -16,6 +17,8 @@ vi.mock('./queries', () => ({
   useDeleteEntry: () => ({ mutateAsync: m.delEntry, isPending: false }),
   useUpdateEntry: () => ({ mutateAsync: m.update, isPending: false }),
   usePeople: () => ({ data: [{ id: 'p1', name: 'Ravi', archived: false }, { id: 'p2', name: 'Meera', archived: false }] }),
+  usePlanEdit: (kind: string) => ({ mutateAsync: kind === 'skip' ? m.skip : m.change, isPending: false }),
+  useExtraPayment: () => ({ mutateAsync: m.extra, isPending: false }),
 }))
 vi.mock('@/features/accounts/queries', () => ({
   useAccounts: () => ({ data: [{ id: 'cash', name: 'Cash', archived: false }, { id: 'bank', name: 'Bank', archived: false }] }),
@@ -47,6 +50,9 @@ beforeEach(() => {
   m.unpaid.mockResolvedValue(undefined)
   m.delEntry.mockResolvedValue(undefined)
   m.update.mockResolvedValue(undefined)
+  m.skip.mockResolvedValue(undefined)
+  m.change.mockResolvedValue(undefined)
+  m.extra.mockResolvedValue(undefined)
   m.delPayment.mockResolvedValue({ id: 'pay1', entry_id: 'e1', amount_paise: 400_000, paid_on: '2026-11-10', account_id: 'bank', mode: 'upi', note: 'part' })
   useToasts.setState({ toasts: [] })
 })
@@ -130,7 +136,7 @@ describe('Entry detail', () => {
     expect(m.delPayment).toHaveBeenCalledWith('pay1')
     await waitFor(() => expect(useToasts.getState().toasts[0]?.message).toBe('Payment of ₹4,000 deleted'))
     act(() => { useToasts.getState().toasts[0]?.actions[0]?.run() })
-    expect(m.record).toHaveBeenCalledWith({ id: 'pay1', entry_id: 'e1', amount_paise: 400_000, paid_on: '2026-11-10', account_id: 'bank', mode: 'upi', note: 'part' })
+    expect(m.record).toHaveBeenCalledWith({ id: 'pay1', entry_id: 'e1', amount_paise: 400_000, paid_on: '2026-11-10', account_id: 'bank', mode: 'upi', note: 'part', target_seq: null })
   })
 
   it('Mark as unpaid asks first and says what it removes', async () => {
@@ -188,3 +194,153 @@ describe('Entry detail', () => {
     expect(m.update).toHaveBeenCalledWith({ id: 'e1', patch: { title: 'Rent loan', notes: 'for rent', due_date: null } })
   })
 })
+
+// ---------------------------------------------------------------- plans (several rows)
+const planRow = (seq: number, due: string, o: Record<string, unknown> = {}) => ({
+  id: `s${seq}`, entry_id: 'e1', seq, due_date: due, due_paise: 100_000, principal_paise: 100_000, interest_paise: 0, paid_paise: 0, paid_on: null, ...o,
+})
+const plan = (o: Record<string, unknown> = {}, rows = [
+  planRow(1, '2026-11-10'), planRow(2, '2026-12-10'), planRow(3, '2027-01-10'), planRow(4, '2027-02-10'),
+], payments: unknown[] = []) => ({
+  ...detail({ kind: 'borrowed', direction: 'pay', principal_paise: 400_000, total_payable_paise: 400_000, start_date: '2026-10-01', due_date: '2027-02-10', notes: null, ...o }, 0, payments),
+  schedule_items: rows,
+})
+
+describe('Entry detail for plans', () => {
+  it('lists the rows with early / on-time / late / overdue / upcoming labels', () => {
+    m.entry = plan({}, [
+      planRow(1, '2026-11-05', { paid_paise: 100_000, paid_on: '2026-11-01' }), // paid early
+      planRow(2, '2026-11-10', { paid_paise: 100_000, paid_on: '2026-11-12' }), // paid late
+      planRow(3, '2026-11-12'), // overdue
+      planRow(4, '2026-11-20'), // upcoming
+    ])
+    ui()
+    const list = screen.getByRole('region', { name: 'Instalments' })
+    expect(list).toHaveTextContent('2 of 4 paid')
+    const items = within(list).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Paid early (4 days)')
+    expect(items[1]).toHaveTextContent('Paid late (2 days)')
+    expect(items[2]).toHaveTextContent('Overdue (3 days late)')
+    expect(items[3]).toHaveTextContent('Due in 5 days')
+    expect(screen.getByRole('region', { name: 'Progress' })).toHaveTextContent('Overdue')
+  })
+
+  it('totals come from rows and extra payments: paid ÷ (paid + still due)', () => {
+    m.entry = plan({}, [planRow(1, '2026-12-10', { due_paise: 40_000, principal_paise: 40_000 })], [
+      { id: 'x1', entry_id: 'e1', schedule_item_id: null, amount_paise: 260_000, paid_on: '2026-11-10', account_id: 'bank', mode: null, note: null, created_at: '2026-11-10T10:00:00Z', txn_id: 't9' },
+    ])
+    ui()
+    const p = screen.getByRole('region', { name: 'Progress' })
+    expect(p).toHaveTextContent('₹400')
+    expect(p).toHaveTextContent('₹2,600 paid')
+    expect(p).toHaveTextContent('of ₹3,000')
+    expect(screen.getByRole('region', { name: 'Payments' })).toHaveTextContent('extra payment')
+    expect(screen.queryByRole('button', { name: /Delete payment/ })).toBeNull() // extra payments cannot be undone
+    expect(screen.getByRole('button', { name: 'Mark as unpaid' })).toBeDisabled()
+    expect(screen.getByText(/shortened by an extra payment/)).toBeInTheDocument()
+  })
+
+  it('Pay on a row targets that row and suggests its amount (scenario D: pay row 3 first)', async () => {
+    const user = userEvent.setup()
+    ui()
+    m.entry = plan({}, [planRow(1, '2026-03-01'), planRow(2, '2026-03-08'), planRow(3, '2026-03-15'), planRow(4, '2026-03-22')])
+    ui()
+    await user.click(screen.getAllByRole('button', { name: 'Pay instalment 3' })[0]!)
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByLabelText('Amount')).toHaveValue('1000')
+    await user.click(within(dialog).getByRole('button', { name: 'Pay', exact: true }))
+    expect(m.record.mock.calls[0]?.[0]).toMatchObject({ entry_id: 'e1', amount_paise: 100_000, target_seq: 3 })
+  })
+
+  it('the main button suggests the next instalment, with chips for everything left', async () => {
+    const user = userEvent.setup()
+    m.entry = plan({}, [planRow(1, '2026-11-10', { paid_paise: 100_000, paid_on: '2026-11-09' }), planRow(2, '2026-12-10'), planRow(3, '2027-01-10')])
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Pay back' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByLabelText('Amount')).toHaveValue('1000')
+    await user.click(within(dialog).getByRole('button', { name: 'Everything left' }))
+    expect(within(dialog).getByLabelText('Amount')).toHaveValue('2000')
+    await user.click(within(dialog).getByRole('button', { name: 'Pay', exact: true }))
+    expect(m.record.mock.calls[0]?.[0]).toMatchObject({ amount_paise: 200_000, target_seq: null })
+  })
+
+  it('Skip month previews the move, then sends base and new rows', async () => {
+    const user = userEvent.setup()
+    m.entry = plan({}, [planRow(1, '2026-01-31', { paid_paise: 100_000, paid_on: '2026-01-31' }), planRow(2, '2026-02-28'), planRow(3, '2026-03-31'), planRow(4, '2026-04-30')])
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Skip month from instalment 2' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('region', { name: 'What will change' })).toHaveTextContent('#2 to #4 each move one month later')
+    await user.click(within(dialog).getByRole('button', { name: 'Skip month' }))
+    const arg = m.skip.mock.calls[0]?.[0]
+    expect(arg.entryId).toBe('e1')
+    expect(arg.base).toHaveLength(4)
+    expect(arg.rows.map((r: { due_date: string }) => r.due_date)).toEqual(['2026-01-31', '2026-03-31', '2026-04-30', '2026-05-31'])
+  })
+
+  it('Change amount previews the re-spread and refuses an amount below what is paid', async () => {
+    const user = userEvent.setup()
+    m.entry = plan({}, [planRow(1, '2026-12-10', { paid_paise: 30_000 }), planRow(2, '2027-01-10'), planRow(3, '2027-02-10'), planRow(4, '2027-03-10')])
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Change amount of instalment 1' }))
+    const dialog = await screen.findByRole('dialog')
+    const input = within(dialog).getByLabelText('New amount')
+    await user.clear(input)
+    await user.type(input, '200')
+    expect(within(dialog).getByRole('alert')).toBeInTheDocument() // below the ₹300 already paid
+    expect(within(dialog).getByRole('button', { name: 'Change amount' })).toBeDisabled()
+    await user.clear(input)
+    await user.type(input, '1300')
+    expect(within(dialog).getByRole('region', { name: 'What will change' })).toHaveTextContent('#1: ₹1,000 → ₹1,300')
+    await user.click(within(dialog).getByRole('button', { name: 'Change amount' }))
+    expect(m.change.mock.calls[0]?.[0].rows[0]).toMatchObject({ seq: 1, due_paise: 130_000 })
+  })
+
+  it('Extra payment previews removed rows and the new last date, blocks more than is left, and sends rows', async () => {
+    const user = userEvent.setup()
+    m.entry = plan()
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Extra payment' }))
+    const dialog = await screen.findByRole('dialog')
+    const input = within(dialog).getByLabelText('Extra amount')
+    await user.type(input, '5000')
+    expect(within(dialog).getByText('That is more than the ₹4,000 left')).toBeInTheDocument()
+    await user.clear(input)
+    await user.type(input, '2500')
+    const preview = within(dialog).getByRole('region', { name: 'What will change' })
+    expect(preview).toHaveTextContent('#4')
+    expect(preview).toHaveTextContent('removed')
+    expect(preview).toHaveTextContent('The plan now ends on')
+    await user.click(within(dialog).getByRole('button', { name: 'Record extra payment' }))
+    const arg = m.extra.mock.calls[0]?.[0]
+    expect(arg).toMatchObject({ entry_id: 'e1', amount_paise: 250_000, account_id: 'cash', paid_on: '2026-11-15' })
+    expect(arg.rows.map((r: { seq: number }) => r.seq)).toEqual([1, 2]) // #4 and #3 are cleared, #2 shrinks by ₹500
+  })
+
+  it('Prepay estimate shows foreclose and part-prepay figures', async () => {
+    const user = userEvent.setup()
+    m.entry = plan({}, [planRow(1, '2026-12-10', { due_paise: 110_000, principal_paise: 100_000, interest_paise: 10_000 }), planRow(2, '2027-01-10', { due_paise: 110_000, principal_paise: 100_000, interest_paise: 10_000 })])
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Prepay estimate' }))
+    const dialog = await screen.findByRole('dialog')
+    const f = within(dialog).getByRole('region', { name: 'Foreclose' })
+    expect(f).toHaveTextContent('Principal left₹2,000')
+    expect(f).toHaveTextContent('Total to close₹2,000')
+    expect(f).toHaveTextContent('Interest saved₹200')
+    await user.type(within(dialog).getByLabelText('Prepay amount'), '1100')
+    expect(within(dialog).getByRole('region', { name: 'Part prepayment' })).toHaveTextContent('2 → 1 instalments left')
+  })
+
+  it('EMI purchases show the store, price, down payment and no-cost note', () => {
+    m.entry = plan({ kind: 'emi_purchase', party_name: 'Croma', people: null, person_id: null, no_cost: true, interest: 'reducing', rate_bps: 1500, down_payment_paise: 600_000, principal_paise: 400_000, title: 'Phone' })
+    ui()
+    expect(screen.getByText('Bought from')).toBeInTheDocument()
+    expect(screen.getByText('Croma')).toBeInTheDocument()
+    expect(screen.getByText('Price')).toBeInTheDocument()
+    expect(screen.getByText('₹10,000')).toBeInTheDocument()
+    expect(screen.getByText('Down payment')).toBeInTheDocument()
+    expect(screen.getByText('No-cost EMI (no interest)')).toBeInTheDocument()
+  })
+})
+

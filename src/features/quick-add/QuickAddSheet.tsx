@@ -3,7 +3,10 @@ import { useAccounts } from '@/features/accounts/queries'
 import { useAddTransaction, useDeleteTransaction, useRecentTransactions, useTitleSuggestions, useUpdateTransaction, type TitleSuggestion } from '@/features/activity/queries'
 import { useCategories } from '@/features/categories/queries'
 import { normaliseName, matchPeople } from '@/features/money/people'
-import { useCreateEntry, useDeleteEntry, usePeople, useSavePerson } from '@/features/money/queries'
+import { PlanFields } from '@/features/money/plan/PlanFields'
+import { emptyPlanForm, formToSpec, previewFor, type PlanFormState } from '@/features/money/plan/planForm'
+import { useCreateEntry, useCreatePlan, useDeleteEntry, usePeople, useSavePerson } from '@/features/money/queries'
+import { planRpcFields, rowsPayload } from '@/lib/plan'
 import { useToday } from '@/features/profile/useToday'
 import type { ActivityRow } from '@/lib/db'
 import { formatMoney, toRupeeInput } from '@/lib/money'
@@ -49,6 +52,8 @@ function QuickAddForm() {
   const update = useUpdateTransaction()
   const del = useDeleteTransaction()
   const createEntry = useCreateEntry()
+  const createPlan = useCreatePlan()
+  const setEmiOpen = useUi((s) => s.setEmiOpen)
   const deleteEntry = useDeleteEntry()
   const savePerson = useSavePerson()
   const allPeople = usePeople().data ?? NONE
@@ -62,6 +67,7 @@ function QuickAddForm() {
     })
   const [lend, setLend] = useState({ personText: '', personId: prefill?.personId ?? (null as string | null), due: '', interest: 'none' as LendInterest, rate: '' })
   const [personFocused, setPersonFocused] = useState(false)
+  const [plan, setPlan] = useState<PlanFormState | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [titleFocused, setTitleFocused] = useState(false)
   const [more, setMore] = useState({ place: !!(editing?.place), notes: !!(editing?.notes), tags: !!(editing?.tags?.length) })
@@ -102,8 +108,10 @@ function QuickAddForm() {
   }
 
   const submitLend = async () => {
-    const r = validateLend(lendForm)
+    const r = validateLend(plan ? { ...lendForm, due: '', interest: 'none', rate: '' } : lendForm)
     if (!r.ok) return setErrors(r.errors)
+    const pv = plan ? previewFor(plan, r.input.amount_paise) : null
+    if (plan && (!pv || !pv.ok)) return setErrors({ plan: pv && !pv.ok ? pv.error : 'Complete the plan' })
     setErrors({})
     const i = r.input
     try {
@@ -112,13 +120,19 @@ function QuickAddForm() {
       if (!personId) personId = (await savePerson.mutateAsync({ values: { name: i.personName } })).id
       writeLast(i.account_id)
       const id = crypto.randomUUID()
-      const saved = createEntry.mutateAsync({
-        id, kind: i.kind, person_id: personId, title: i.title, amount_paise: i.amount_paise, account_id: i.account_id, start_date: i.start_date,
-        due_date: i.due_date, interest: i.interest, rate_bps: i.rate_bps, notes: i.notes,
-      })
+      const fields = plan && pv && pv.ok ? planRpcFields(formToSpec(plan, i.amount_paise), pv.preview) : null
+      const saved = fields && pv && pv.ok
+        ? createPlan.mutateAsync({
+            id, kind: i.kind, person_id: personId, party: null, title: i.title, principal_paise: i.amount_paise, down_paise: 0, account_id: i.account_id,
+            category_id: null, start_date: i.start_date, interest: fields.interest, rate_bps: fields.rateBps, no_cost: false, rows: rowsPayload(pv.preview.rows),
+          })
+        : createEntry.mutateAsync({
+            id, kind: i.kind, person_id: personId, title: i.title, amount_paise: i.amount_paise, account_id: i.account_id, start_date: i.start_date,
+            due_date: i.due_date, interest: i.interest, rate_bps: i.rate_bps, notes: i.notes,
+          })
       setQuickAddOpen(false)
       toast().show({
-        message: `${i.kind === 'lent' ? 'Lent' : 'Borrowed'} ${formatMoney(i.amount_paise)} ${i.kind === 'lent' ? 'to' : 'from'} ${i.personName}`,
+        message: `${i.kind === 'lent' ? 'Lent' : 'Borrowed'} ${formatMoney(i.amount_paise)} ${i.kind === 'lent' ? 'to' : 'from'} ${i.personName}${pv && pv.ok ? ` in ${pv.preview.count} instalments` : ''}`,
         actions: [
           { label: 'Undo', run: () => void saved.then(() => deleteEntry.mutateAsync(id)).catch(() => undefined) },
           { label: 'Add another', run: () => openQuickAdd({ kind: i.kind, accountId: i.account_id, date: i.start_date }) },
@@ -172,6 +186,12 @@ function QuickAddForm() {
               {k.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {!editing && (
+        <div className="flex justify-center">
+          <Chip onClick={() => { setQuickAddOpen(false); setEmiOpen(true) }}>🛍 EMI / instalments</Chip>
         </div>
       )}
 
@@ -276,20 +296,29 @@ function QuickAddForm() {
           <input type="date" aria-label="Date" value={form.date} onChange={(e) => e.target.value && set('date', e.target.value)}
                  className="absolute inset-0 h-full w-full opacity-0" />
         </label>
-        {lending && (
+        {lending && !plan && (
           <label className="relative inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm">
             ⏰ {lend.due ? `Due ${lend.due}` : 'No due date'}
             <input type="date" aria-label="Due date" value={lend.due} onChange={(e) => setLend((l) => ({ ...l, due: e.target.value }))} className="absolute inset-0 h-full w-full opacity-0" />
           </label>
         )}
-        {lending && lend.due && <Chip onClick={() => setLend((l) => ({ ...l, due: '' }))}>Clear due date</Chip>}
+        {lending && !plan && lend.due && <Chip onClick={() => setLend((l) => ({ ...l, due: '' }))}>Clear due date</Chip>}
         {!lending && !more.place && <Chip onClick={() => setMore((m) => ({ ...m, place: true }))}>+ Place</Chip>}
         {!more.notes && <Chip onClick={() => setMore((m) => ({ ...m, notes: true }))}>+ Note</Chip>}
         {!lending && !more.tags && <Chip onClick={() => setMore((m) => ({ ...m, tags: true }))}>+ Tags</Chip>}
       </div>
       {errors.due && <p role="alert" className="text-sm text-money-red">{errors.due}</p>}
 
-      {lending && (
+ {lending && (
+        <Chip selected={!!plan} onClick={() => setPlan(plan ? null : emptyPlanForm(today))}>Repay in instalments</Chip>
+      )}
+      {lending && plan && (
+        <PlanFields form={plan} onChange={setPlan} principal={amount.paise ?? 0} today={today}
+                    modes={['equal', 'installment', 'weekly', 'custom', 'emi']} />
+      )}
+      {errors.plan && <p role="alert" className="text-sm text-money-red">{errors.plan}</p>}
+
+      {lending && !plan && (
         <div className="space-y-2">
           <div role="group" aria-label="Interest" className="flex flex-wrap gap-2">
             {INTERESTS.map((o) => <Chip key={o.value} selected={lend.interest === o.value} onClick={() => setLend((l) => ({ ...l, interest: o.value }))}>{o.label}</Chip>)}

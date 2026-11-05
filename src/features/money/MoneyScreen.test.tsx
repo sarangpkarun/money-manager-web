@@ -22,7 +22,7 @@ import MoneyScreen from './MoneyScreen'
 
 const entry = (o: Partial<OverviewEntry>): OverviewEntry => ({
   id: 'e1', kind: 'lent', direction: 'receive', title: 'Loan to Ravi', person_id: 'p1', person_name: 'Ravi', principal_paise: 1_000_000, total_paise: 1_000_000,
-  paid_paise: 0, outstanding_paise: 1_000_000, start_date: '2026-11-01', due_date: '2026-12-01', ...o,
+  paid_paise: 0, outstanding_paise: 1_000_000, start_date: '2026-11-01', due_date: '2026-12-01', overdue_paise: 0, rows_total: 1, rows_paid: 0, ...o,
 })
 const ageing = { current: 0, d1_30: 0, d31_60: 0, d61_plus: 0 }
 const overview = (entries: OverviewEntry[], stats: Partial<MoneyOverview['stats']> = {}): MoneyOverview => ({

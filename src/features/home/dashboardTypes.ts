@@ -21,6 +21,19 @@ export interface DashboardAccount {
   due_day: number | null
 }
 
+export interface DueSoonItem {
+  entry_id: string; seq: number; kind: string; direction: 'receive' | 'pay'; title: string; name: string | null
+  due_date: string; remaining_paise: number
+}
+
+export interface EmiLoad {
+  months: { month: string; due_paise: number }[]
+  overdue_paise: number
+  outstanding_paise: number
+  debt_free_date: string | null
+  open_count: number
+}
+
 /** Shape of `dashboard_summary` (all money in whole paise). */
 export interface Dashboard {
   month: {
@@ -37,6 +50,8 @@ export interface Dashboard {
   accounts: DashboardAccount[]
   /** Lending figures; absent in results cached before Phase 4. */
   people?: MoneyStats
+  due_soon?: { items: DueSoonItem[]; total_count: number }
+  emi_load?: EmiLoad
   net_position?: { assets: number; card_outstanding: number; owed_to_me: number; i_owe: number }
   generated_at: string
 }

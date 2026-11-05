@@ -1,6 +1,6 @@
 import type { DateStr } from '@/lib/dates'
 
-export type EntryKind = 'lent' | 'borrowed'
+export type EntryKind = 'lent' | 'borrowed' | 'emi_purchase' | 'instalment'
 export type Direction = 'receive' | 'pay'
 
 export interface Ageing { current: number; d1_30: number; d31_60: number; d61_plus: number }
@@ -16,7 +16,13 @@ export interface OverviewEntry {
   id: string; kind: EntryKind; direction: Direction; title: string
   person_id: string | null; person_name: string | null
   principal_paise: number; total_paise: number; paid_paise: number; outstanding_paise: number
-  start_date: DateStr; due_date: DateStr | null
+  start_date: DateStr
+  /** earliest unpaid due date (null when none, or no due date) */
+  due_date: DateStr | null
+  /** part of `outstanding_paise` that is past its due date */
+  overdue_paise: number
+  rows_total: number
+  rows_paid: number
 }
 
 export interface MoneyOverview { stats: MoneyStats; entries: OverviewEntry[] }

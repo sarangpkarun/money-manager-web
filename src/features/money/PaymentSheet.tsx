@@ -13,12 +13,21 @@ import type { Direction } from './types'
 const MODES: { v: PayMode; label: string }[] = [{ v: 'cash', label: 'Cash' }, { v: 'upi', label: 'UPI' }, { v: 'bank', label: 'Bank' }, { v: 'card', label: 'Card' }, { v: 'other', label: 'Other' }]
 
 /** Record a payment against an entry. Overpayment is refused here and again by the database. */
-export function PaymentSheet({ entryId, direction, remaining, today, defaultAccountId, onClose }: {
-  entryId: string; direction: Direction; remaining: number; today: string; defaultAccountId?: string | null; onClose: () => void
+export function PaymentSheet({ entryId, direction, remaining, today, defaultAccountId, targetSeq, suggested, onClose }: {
+  entryId: string; direction: Direction
+  /** everything still owed on the entry (the most one payment can be) */
+  remaining: number
+  today: string; defaultAccountId?: string | null
+  /** pay this plan row first; any extra flows to the earliest unpaid rows */
+  targetSeq?: number | null
+  /** amount to pre-fill (the row's remaining, or the next instalment); defaults to `remaining` */
+  suggested?: number
+  onClose: () => void
 }) {
   const accounts = (useAccounts().data ?? []).filter((a) => !a.archived)
   const record = useRecordPayment()
-  const [amount, setAmount] = useState(toRupeeInput(remaining))
+  const start = suggested ?? remaining
+  const [amount, setAmount] = useState(toRupeeInput(start))
   const [accountId, setAccountId] = useState<string | null>(defaultAccountId ?? null)
   const [date, setDate] = useState(today)
   const [mode, setMode] = useState<PayMode | null>(null)
@@ -35,7 +44,7 @@ export function PaymentSheet({ entryId, direction, remaining, today, defaultAcco
     if (!date) return setError('Choose a date')
     setError(null)
     try {
-      await record.mutateAsync({ id: crypto.randomUUID(), entry_id: entryId, amount_paise: parsed.paise, paid_on: date, account_id: account, mode, note: note.trim() || null })
+      await record.mutateAsync({ id: crypto.randomUUID(), entry_id: entryId, amount_paise: parsed.paise, paid_on: date, account_id: account, mode, note: note.trim() || null, target_seq: targetSeq ?? null })
       useToasts.getState().show({ message: parsed.paise === remaining ? 'Settled in full' : `${receiving ? 'Received' : 'Paid'} ${formatMoney(parsed.paise)}` })
       onClose()
     } catch (e) {
@@ -44,13 +53,14 @@ export function PaymentSheet({ entryId, direction, remaining, today, defaultAcco
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title={receiving ? 'Receive money' : 'Pay back'} description={`${formatMoney(remaining)} left`}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title={receiving ? 'Receive money' : 'Pay back'} description={targetSeq ? `Instalment #${targetSeq} · ${formatMoney(remaining)} left in total` : `${formatMoney(remaining)} left`}>
       <div className="space-y-4">
         <Field label="Amount (₹)" error={error ?? undefined} hint={parsed.preview ?? undefined}>
           <input className={inputCls} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Amount" />
         </Field>
         <div className="flex gap-2">
-          <Chip onClick={() => setAmount(toRupeeInput(remaining))}>Full amount</Chip>
+          {start !== remaining && <Chip onClick={() => setAmount(toRupeeInput(start))}>This instalment</Chip>}
+          <Chip onClick={() => setAmount(toRupeeInput(remaining))}>{start !== remaining ? 'Everything left' : 'Full amount'}</Chip>
           {remaining >= 200 && <Chip onClick={() => setAmount(toRupeeInput(Math.floor(remaining / 2)))}>Half</Chip>}
         </div>
         <fieldset className="space-y-2">

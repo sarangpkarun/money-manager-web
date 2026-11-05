@@ -7,7 +7,7 @@ import { useToasts } from '@/ui/toastStore'
 
 const m = vi.hoisted(() => ({
   add: vi.fn(), update: vi.fn(), del: vi.fn(), suggestions: { data: [] as unknown[] },
-  createEntry: vi.fn(), deleteEntry: vi.fn(), savePerson: vi.fn(),
+  createEntry: vi.fn(), deleteEntry: vi.fn(), savePerson: vi.fn(), createPlan: vi.fn(),
 }))
 
 const accounts = [
@@ -37,6 +37,7 @@ const people = [{ id: 'ravi', name: 'Ravi Kumar', archived: false }, { id: 'meer
 vi.mock('@/features/money/queries', () => ({
   usePeople: () => ({ data: people }),
   useCreateEntry: () => ({ mutateAsync: m.createEntry }),
+  useCreatePlan: () => ({ mutateAsync: m.createPlan }),
   useDeleteEntry: () => ({ mutateAsync: m.deleteEntry }),
   useSavePerson: () => ({ mutateAsync: m.savePerson }),
 }))
@@ -57,6 +58,7 @@ beforeEach(() => {
   m.update.mockImplementation((_v, opts) => opts?.onSuccess?.())
   m.del.mockResolvedValue({})
   m.createEntry.mockResolvedValue({})
+  m.createPlan.mockResolvedValue({})
   m.deleteEntry.mockResolvedValue({})
   m.savePerson.mockResolvedValue({ id: 'new-person' })
   m.suggestions = { data: [] }
@@ -361,3 +363,49 @@ describe('Lent / Borrowed', () => {
     expect(m.createEntry).not.toHaveBeenCalled()
   })
 })
+
+describe('Repay in instalments / EMI chip', () => {
+  it('Borrowed with a plan: 10 equal months, previewed live, sent as a plan with rows', async () => {
+    const { user, dialog } = await open({ kind: 'borrowed', personId: 'ravi' })
+    await user.type(within(dialog).getByLabelText('Amount'), '50000')
+    await user.click(within(dialog).getByRole('button', { name: 'Repay in instalments' }))
+    expect(within(dialog).queryByLabelText('Due date')).toBeNull() // the plan replaces the single due date
+    expect(within(dialog).queryByRole('group', { name: 'Interest' })).toBeNull()
+    await user.type(within(dialog).getByLabelText('Number of months'), '10')
+    fireEvent.change(within(dialog).getByLabelText('First instalment'), { target: { value: '2026-12-05' } })
+    const preview = within(dialog).getByRole('region', { name: 'Plan preview' })
+    expect(preview).toHaveTextContent('10 × ₹5,000')
+    expect(preview).toHaveTextContent('last 2027-09-05')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(m.createEntry).not.toHaveBeenCalled()
+    expect(m.createPlan).toHaveBeenCalledOnce()
+    const p = m.createPlan.mock.calls[0]?.[0]
+    expect(p).toMatchObject({ kind: 'borrowed', person_id: 'ravi', principal_paise: 5_000_000, down_paise: 0, interest: 'none', rate_bps: 0, no_cost: false, start_date: '2026-11-05' })
+    expect(p.rows).toHaveLength(10)
+    expect(p.rows[1]).toEqual({ seq: 2, due_date: '2027-01-05', due_paise: 500_000, principal_paise: 500_000, interest_paise: 0 })
+    await waitFor(() => expect(toast()?.message).toBe('Borrowed ₹50,000 from Ravi Kumar in 10 instalments'))
+  })
+
+  it('an incomplete plan blocks saving and says what is missing', async () => {
+    const { user, dialog } = await open({ kind: 'lent', personId: 'ravi' })
+    await user.type(within(dialog).getByLabelText('Amount'), '1000')
+    await user.click(within(dialog).getByRole('button', { name: 'Repay in instalments' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await within(dialog).findAllByText('How many instalments?')).not.toHaveLength(0)
+    expect(m.createPlan).not.toHaveBeenCalled()
+  })
+
+  it('turning the plan off returns to a single repayment', async () => {
+    const { user, dialog } = await open({ kind: 'lent', personId: 'ravi' })
+    await user.click(within(dialog).getByRole('button', { name: 'Repay in instalments' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Repay in instalments' }))
+    expect(within(dialog).getByLabelText('Due date')).toBeInTheDocument()
+  })
+
+  it('the EMI / instalments chip closes Quick Add and opens the EMI sheet', async () => {
+    const { user, dialog } = await open()
+    await user.click(within(dialog).getByRole('button', { name: /EMI \/ instalments/ }))
+    expect(useUi.getState()).toMatchObject({ quickAddOpen: false, emiOpen: true })
+  })
+})
+
