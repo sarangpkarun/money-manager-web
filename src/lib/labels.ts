@@ -1,4 +1,4 @@
-import { diffDays, type DateStr } from './dates'
+import { diffDays, hasDueDate, type DateStr } from './dates'
 import { isPaid, remaining } from './allocate'
 import type { Paise } from './money'
 import type { ScheduleRow } from './schedule'
@@ -8,7 +8,7 @@ export type Tone = 'green' | 'blue' | 'amber' | 'red' | 'grey'
 
 export type RowLabelKind =
   | 'paid_early' | 'paid_on_time' | 'paid_late' | 'paid' // paid = fully paid but no date recorded
-  | 'overdue' | 'overdue_partial' | 'upcoming'
+  | 'overdue' | 'overdue_partial' | 'upcoming' | 'no_due'
 
 export interface RowLabel {
   kind: RowLabelKind
@@ -22,13 +22,15 @@ const plural = (n: number) => `${n} day${n === 1 ? '' : 's'}`
 
 /** Spec 4.4: early / on time / late / overdue / upcoming for one plan row. "Overdue" starts the day AFTER the due date. */
 export function rowLabel(row: ScheduleRow, today: DateStr): RowLabel {
+  const dated = hasDueDate(row.due_date)
   if (isPaid(row)) {
-    if (!row.paid_on) return { kind: 'paid', days: 0, tone: 'green', text: 'Paid' }
+    if (!row.paid_on || !dated) return { kind: 'paid', days: 0, tone: 'green', text: 'Paid' }
     const delta = diffDays(row.paid_on, row.due_date) // positive = paid before the due date
     if (delta > 0) return { kind: 'paid_early', days: delta, tone: 'blue', text: `Paid early (${plural(delta)})` }
     if (delta === 0) return { kind: 'paid_on_time', days: 0, tone: 'green', text: 'Paid on time' }
     return { kind: 'paid_late', days: -delta, tone: 'amber', text: `Paid late (${plural(-delta)})` }
   }
+  if (!dated) return { kind: 'no_due', days: 0, tone: 'grey', text: row.paid_paise > 0 ? 'Partly paid, no due date' : 'No due date' }
   const late = diffDays(row.due_date, today)
   if (late > 0) {
     return row.paid_paise > 0

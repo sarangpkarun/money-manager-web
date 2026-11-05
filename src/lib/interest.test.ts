@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flatInterest, interestToDate, planInterest, simpleInterestForDays, simpleInterestForTerm } from './interest'
+import { entryInterest, flatInterest, interestToDate, planInterest, simpleInterestForDays, simpleInterestForTerm } from './interest'
 
 describe('interest', () => {
   it('flat is a one-time percentage of principal', () => {
@@ -30,4 +30,20 @@ describe('interest', () => {
     expect(interestToDate({ ...base, interest: 'simple' }, '2025-12-01')).toBe(0)
     expect(interestToDate({ ...base, interest: 'simple', rateBps: 0 }, '2026-03-15')).toBe(0)
   })
+})
+
+describe('entryInterest (mirrors create_entry)', () => {
+  const base = { principal: 1_000_000, rateBps: 1200, startDate: '2026-01-01' }
+  it('none and zero rate are free', () => {
+    expect(entryInterest({ ...base, interest: 'none', dueDate: null })).toBe(0)
+    expect(entryInterest({ ...base, interest: 'flat', rateBps: 0, dueDate: null })).toBe(0)
+  })
+  it('flat is a one-time percentage, with or without a due date', () => {
+    expect(entryInterest({ ...base, rateBps: 1000, interest: 'flat', dueDate: null })).toBe(100_000)
+  })
+  it('simple is principal × rate × days / 365 (same figure the SQL test asserts)', () => {
+    expect(entryInterest({ ...base, interest: 'simple', dueDate: '2026-07-01' })).toBe(Math.round((1_000_000 * 1200 * 181) / (10_000 * 365)))
+    expect(entryInterest({ ...base, interest: 'simple', dueDate: '2026-01-01' })).toBe(0)
+  })
+  it('simple needs a due date', () => expect(() => entryInterest({ ...base, interest: 'simple', dueDate: null })).toThrow(RangeError))
 })

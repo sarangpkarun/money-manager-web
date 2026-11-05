@@ -30,3 +30,14 @@ export function interestToDate(
   if (e.interest === 'flat') return flatInterest(e.principal, e.rateBps)
   return simpleInterestForDays(e.principal, e.rateBps, diffDays(e.startDate, today))
 }
+
+/**
+ * Interest fixed at creation of a single-date entry (mirrors create_entry in SQL): flat = a one-time percentage,
+ * simple = principal x rate x days(start..due)/365 and needs a due date, none = 0.
+ */
+export function entryInterest(e: { principal: Paise; interest: SimpleKind; rateBps: number; startDate: DateStr; dueDate: DateStr | null }): Paise {
+  if (e.interest === 'none' || e.rateBps <= 0) return 0
+  if (e.interest === 'flat') return flatInterest(e.principal, e.rateBps)
+  if (!e.dueDate) throw new RangeError('simple interest needs a due date')
+  return simpleInterestForDays(e.principal, e.rateBps, diffDays(e.startDate, e.dueDate))
+}

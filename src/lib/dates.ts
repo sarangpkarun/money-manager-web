@@ -90,3 +90,7 @@ export const endOfMonth = (s: DateStr): DateStr => {
   const { y, m } = parseDate(s)
   return formatDate(y, m, daysInMonth(y, m))
 }
+
+/** Entries without a due date keep one schedule row dated far in the future (the column is NOT NULL). Never "overdue". */
+export const NO_DUE_DATE: DateStr = '9999-12-31'
+export const hasDueDate = (due: DateStr | null | undefined): due is DateStr => !!due && due !== NO_DUE_DATE

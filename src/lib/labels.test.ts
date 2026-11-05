@@ -74,3 +74,16 @@ describe('scenario D: weekly, row 3 paid first and 2 days late', () => {
     expect(rowLabel(after[0] as ScheduleRow, '2026-03-18')).toMatchObject({ kind: 'overdue', days: 17 })
   })
 })
+
+describe('entries without a due date', () => {
+  const NO = { due_date: '9999-12-31', due_paise: 1000, principal_paise: 1000 }
+  it('are never overdue, however long ago they started', () => {
+    expect(rowLabel(row(NO), '2030-01-01')).toMatchObject({ kind: 'no_due', tone: 'grey', text: 'No due date' })
+    expect(rowLabel(row({ ...NO, paid_paise: 400 }), '2030-01-01').text).toBe('Partly paid, no due date')
+    expect(entryStatus([row(NO)], '2999-01-01')).toBe('pending')
+    expect(entryStatus([row({ ...NO, paid_paise: 5 })], '2999-01-01')).toBe('partial')
+  })
+  it('settled ones say Paid, not "paid early"', () => {
+    expect(rowLabel(row({ ...NO, paid_paise: 1000, paid_on: '2026-11-20' }), '2026-11-21')).toMatchObject({ kind: 'paid', text: 'Paid' })
+  })
+})
