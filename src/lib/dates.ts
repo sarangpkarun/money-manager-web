@@ -72,3 +72,21 @@ export function addMonths(s: DateStr, n: number, anchorDay?: number): DateStr {
 export const diffDays = (a: DateStr, b: DateStr): number => toDayNumber(b) - toDayNumber(a)
 
 export const compareDates = (a: DateStr, b: DateStr): number => (a < b ? -1 : a > b ? 1 : 0)
+
+/** 0 = Sunday … 6 = Saturday. */
+export const dayOfWeek = (s: DateStr): number => (((toDayNumber(s) + 4) % 7) + 7) % 7 // 1970-01-01 was a Thursday
+
+/** First day of the week containing `s`; weekStartsOn: 0 = Sunday, 1 = Monday. */
+export function startOfWeek(s: DateStr, weekStartsOn: 0 | 1 = 1): DateStr {
+  return addDays(s, -((dayOfWeek(s) - weekStartsOn + 7) % 7))
+}
+
+export const startOfMonth = (s: DateStr): DateStr => {
+  const { y, m } = parseDate(s)
+  return formatDate(y, m, 1)
+}
+
+export const endOfMonth = (s: DateStr): DateStr => {
+  const { y, m } = parseDate(s)
+  return formatDate(y, m, daysInMonth(y, m))
+}

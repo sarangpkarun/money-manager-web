@@ -1,8 +1,8 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import {
-  addDays, addMonths, addWeeks, compareDates, daysInMonth, diffDays, formatDate, fromDayNumber,
-  isValidDate, parseDate, toDayNumber,
+  addDays, addMonths, addWeeks, compareDates, dayOfWeek, daysInMonth, diffDays, endOfMonth, formatDate, fromDayNumber,
+  isValidDate, parseDate, startOfMonth, startOfWeek, toDayNumber,
 } from './dates'
 
 describe('daysInMonth / isValidDate', () => {
@@ -94,5 +94,27 @@ describe('addMonths', () => {
         isValidDate(addMonths('2026-01-01', n, day)),
       ),
     )
+  })
+})
+
+describe('week and month helpers', () => {
+  it('dayOfWeek (0 = Sunday)', () => {
+    expect(dayOfWeek('1970-01-01')).toBe(4) // Thursday
+    expect(dayOfWeek('2026-11-05')).toBe(4) // Thursday
+    expect(dayOfWeek('2026-11-08')).toBe(0) // Sunday
+    expect(dayOfWeek('1969-12-28')).toBe(0)
+  })
+  it('startOfWeek for Monday- and Sunday-first weeks', () => {
+    expect(startOfWeek('2026-11-05')).toBe('2026-11-02')
+    expect(startOfWeek('2026-11-02')).toBe('2026-11-02')
+    expect(startOfWeek('2026-11-08')).toBe('2026-11-02') // Sunday belongs to the Monday-first week before it
+    expect(startOfWeek('2026-11-05', 0)).toBe('2026-11-01')
+    expect(startOfWeek('2026-11-01', 0)).toBe('2026-11-01')
+  })
+  it('startOfMonth / endOfMonth', () => {
+    expect(startOfMonth('2026-11-17')).toBe('2026-11-01')
+    expect(endOfMonth('2026-11-17')).toBe('2026-11-30')
+    expect(endOfMonth('2024-02-10')).toBe('2024-02-29')
+    expect(endOfMonth('2026-12-31')).toBe('2026-12-31')
   })
 })
