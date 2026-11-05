@@ -410,3 +410,18 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 - [ ] Phase 0 leftovers still open: installed-app viewport gap, push spike, Supabase redirect URLs.
 
 **Known limits:** entry-based types (lent, on behalf, borrowed, EMI) and Person/Status filters arrive with Phases 4 to 6; there is no offline write queue yet (v1.1); Playwright runs on Chromium emulation, not real iOS Safari.
+
+## Phase 3 status (updated 2026-11-05)
+
+**Built and verified locally:** migration `20260103000001_dashboard.sql` (`dashboard_summary(p_month, p_today, p_filters)`: one call returns month totals with last-month comparison and projection, a zero-filled daily series, category/account/place breakdowns, the 5 latest rows and account balances/cards; built on `filter_transactions` so RLS and filter rules match Activity); Home with This month (sparkline + dashed average, scrub to read a day), Where it went (Category/Account/Place toggle, donut, ranked bars), Credit cards (outstanding, utilisation, due day), Recent activity; month switcher and filter sheet (date section hidden, filters in the URL at `/`); drill-downs into Activity with the same month and filters; `profiles.dashboard_layout` applied (order/hide), reserved ids for later cards; theme, log out and the push spike moved into Settings.
+
+**Numbers:** 384 unit/component tests, 87 SQL/RLS tests (incl. a property test that dashboard totals equal `activity_summary` for random data and filters), 7 Playwright e2e tests, coverage 98.8% overall. `dashboard_summary` on 5,000 rows: 17 to 25 ms (budget 150), month read uses the `(user_id, date)` index. Cold reload with the dashboard request held for 4 s still paints the cached numbers (about 400 ms in the dev build including page load and sign-in restore); exactly one `dashboard_summary` request. Initial JS 183.1 KB gz (budget 200).
+
+**Decisions:** charts are hand-written SVG; zod was removed from `filters.ts` and the dashboard guard because it added ~50 KB gz to the initial bundle (plain validators, same tests); balances on Home are as-of-now and not date-filtered; projection only for the current month after 3 days.
+
+**Not done / needs you:**
+- [ ] `supabase db push` for `20260103000001_dashboard.sql` (after your approval), then check Home on the deployed app.
+- [ ] On-device iPhone check of Home (cached paint, scrubbing the sparkline, drill-downs, safe areas).
+- [ ] Earlier open items: Phase 0 viewport gap, push spike, Supabase redirect URLs; Phase 1/2/3 commits are not pushed to GitHub.
+
+**Known limits:** Net position, Due soon, People, EMI load and Insights cards arrive with later phases; the layout editor is Phase 7; Home cannot yet edit or delete a recent row (it opens Activity).

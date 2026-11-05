@@ -22,6 +22,8 @@ test('scenario E: + → 120 → Food → Save (3 taps) appears in Activity', asy
   await expect(page.getByRole('status')).toContainText('Added ₹120 · Food')
 
   await page.getByRole('link', { name: 'Activity' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible() // Home keeps its own rows mounted but hidden
   const row = page.getByRole('button', { name: 'Food, open details' })
   await expect(row).toBeVisible()
   await expect(row).toContainText('−₹120')
@@ -37,6 +39,7 @@ test('Undo removes the transaction again', async ({ page }) => {
   await page.getByRole('button', { name: /Groceries/ }).click()
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByRole('link', { name: 'Activity' }).click()
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible() // Home keeps its own rows mounted but hidden
   await expect(page.getByRole('button', { name: 'Groceries, open details' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Groceries, open details' }).click()

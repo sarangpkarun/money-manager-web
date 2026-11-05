@@ -21,6 +21,7 @@ test.afterAll(async () => { await deleteUser(user.id) })
 test('5,000 rows: only a window is in the DOM, and scrolling loads more pages', async ({ page }) => {
   await login(page, user)
   await page.getByRole('link', { name: 'Activity' }).click()
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible() // Home keeps its own rows mounted but hidden
   const list = page.getByTestId('activity-list')
   const rendered = () => list.locator('[data-index]').count()
 
@@ -40,6 +41,7 @@ test('5,000 rows: only a window is in the DOM, and scrolling loads more pages', 
 test('search finds one row among 5,000 quickly', async ({ page }) => {
   await login(page, user)
   await page.getByRole('link', { name: 'Activity' }).click()
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible() // Home keeps its own rows mounted but hidden
   await page.getByRole('button', { name: /open details/ }).first().waitFor()
 
   // server-side search time (request -> response) is the plan's metric: < 300 ms
