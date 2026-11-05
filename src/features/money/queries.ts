@@ -87,7 +87,7 @@ export function useEntry(id: string | undefined) {
 function useRefreshMoney() {
   const qc = useQueryClient()
   return () =>
-    Promise.all([qk.money, qk.people, qk.peopleBalances, qk.dashboardAll, qk.balances, qk.activity, ['activity-summary'], qk.recent].map((queryKey) =>
+    Promise.all([qk.money, qk.people, qk.peopleBalances, qk.dashboardAll, qk.calendarAll, qk.balances, qk.activity, ['activity-summary'], qk.recent].map((queryKey) =>
       qc.invalidateQueries({ queryKey })))
 }
 

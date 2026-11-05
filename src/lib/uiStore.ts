@@ -24,6 +24,9 @@ interface UiState {
   /** Home's own filter query string (the Home tab stays mounted, so it is remembered here too). */
   homeSearch: string
   setHomeSearch: (s: string) => void
+  /** Calendar's own filter query string (it filters the Spending layer and totals). */
+  calendarSearch: string
+  setCalendarSearch: (s: string) => void
   /** EMI / instalments purchase sheet (opened from Quick Add). */
   emiOpen: boolean
   setEmiOpen: (o: boolean) => void
@@ -43,6 +46,8 @@ export const useUi = create<UiState>((set) => ({
   setEmiOpen: (emiOpen) => set({ emiOpen }),
   homeSearch: '',
   setHomeSearch: (homeSearch) => set({ homeSearch }),
+  calendarSearch: '',
+  setCalendarSearch: (calendarSearch) => set({ calendarSearch }),
   setQuickAddOpen: (quickAddOpen) => set(quickAddOpen ? { quickAddOpen } : { quickAddOpen, quickAddPrefill: null }),
   openQuickAdd: (prefill) => set({ quickAddOpen: true, quickAddPrefill: prefill ?? null }),
 }))

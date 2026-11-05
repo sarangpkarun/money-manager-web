@@ -6,6 +6,9 @@ import { useRecentTransactions } from '@/features/activity/queries'
 import { useCategories } from '@/features/categories/queries'
 import { useUi } from '@/lib/uiStore'
 import HomeScreen from '@/features/home/HomeScreen'
+import { tabFiltersFromSearch, tabRpcFilters } from '@/features/home/useTabFilters'
+import { useToday } from '@/features/profile/useToday'
+import { useQueryClient } from '@tanstack/react-query'
 
 const CalendarScreen = lazy(() => import('@/features/calendar/CalendarScreen'))
 const ActivityScreen = lazy(() => import('@/features/activity/ActivityScreen'))
@@ -87,6 +90,17 @@ function Prefetch() {
   useAccounts()
   useCategories()
   useRecentTransactions()
+  // the current month of the Calendar, so the tab (and its day sheet) opens with data already in the cache
+  const qc = useQueryClient()
+  const today = useToday()
+  const month = useUi((s) => s.month)
+  const stored = useUi((s) => s.calendarSearch)
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      void import('@/features/calendar/queries').then((m) => qc.prefetchQuery(m.calendarMonthOptions(month, today, tabRpcFilters(tabFiltersFromSearch(stored)))))
+    }, 2500)
+    return () => window.clearTimeout(id)
+  }, [qc, today, month, stored])
   return null
 }
 
