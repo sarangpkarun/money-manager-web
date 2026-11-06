@@ -14,5 +14,6 @@ export const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-export const json = (body: unknown, status = 200): Response =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
+/** JSON response. Functions that browsers call (send-test, delete-account) send CORS headers; the cron function does not (`cors: false`). */
+export const json = (body: unknown, status = 200, cors = true): Response =>
+  new Response(JSON.stringify(body), { status, headers: { ...(cors ? CORS : {}), 'Content-Type': 'application/json' } })

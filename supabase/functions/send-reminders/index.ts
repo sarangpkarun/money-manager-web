@@ -3,7 +3,8 @@
 // SUPABASE_SERVICE_ROLE_KEY are provided by the Edge runtime. Deployed with verify_jwt = false: the shared secret below is the check.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { runSender } from '../_shared/sender.ts'
-import { safeEqual, json } from '../_shared/util.ts'
+import { cronAuthorized } from '../_shared/cronAuth.ts'
+import { json } from '../_shared/util.ts'
 import { sendPush } from '../_shared/webpush.ts'
 
 Deno.serve(async (req) => {
@@ -11,14 +12,14 @@ Deno.serve(async (req) => {
 
   // the cron secret is generated inside the database and read here with the service role: it never appears in git
   const { data: secret } = await sb.rpc('get_cron_secret')
-  if (typeof secret !== 'string' || !safeEqual(req.headers.get('x-cron-secret') ?? '', secret)) return json({ error: 'unauthorized' }, 401)
+  if (!cronAuthorized(req.headers.get('x-cron-secret'), secret)) return json({ error: 'unauthorized' }, 401, false)
 
   const vapid = {
     publicKey: Deno.env.get('VAPID_PUBLIC_KEY') ?? '',
     privateKey: Deno.env.get('VAPID_PRIVATE_KEY') ?? '',
     subject: Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@example.com',
   }
-  if (!vapid.publicKey || !vapid.privateKey) return json({ error: 'VAPID keys are not configured' }, 500)
+  if (!vapid.publicKey || !vapid.privateKey) return json({ error: 'VAPID keys are not configured' }, 500, false)
 
   try {
     const stats = await runSender({
@@ -34,9 +35,9 @@ Deno.serve(async (req) => {
       now: () => Date.now(),
     })
     console.log(JSON.stringify({ at: new Date().toISOString(), ...stats }))
-    return json(stats)
+    return json(stats, 200, false)
   } catch (e) {
     console.error('send-reminders failed', e)
-    return json({ error: String(e) }, 500)
+    return json({ error: 'send failed' }, 500, false)
   }
 })
