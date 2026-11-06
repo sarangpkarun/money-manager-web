@@ -5,7 +5,8 @@ import { z } from 'zod'
 z.config({ jitless: true })
 
 const email = z.string().trim().toLowerCase().pipe(z.email('Enter a valid email'))
-const password = z.string().min(8, 'At least 8 characters')
+/** Same rule as the server (config.toml: 8+ characters, letters and digits). */
+const password = z.string().min(8, 'At least 8 characters').regex(/[A-Za-z]/, 'Include at least one letter').regex(/[0-9]/, 'Include at least one number')
 
 export const loginSchema = z.object({ email, password: z.string().min(1, 'Enter your password') })
 export const signupSchema = z
