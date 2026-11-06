@@ -31,6 +31,10 @@ Rules (due tomorrow / today / overdue, quiet hours, manual note reminders, summa
 - Export builds files in the browser (`lib/exportData.ts`); nothing is uploaded.
 - Delete account calls the `delete-account` Edge Function (`supabase functions deploy delete-account`). It needs no extra secrets: the Edge runtime supplies the service role.
 
+## Insights (Phase 8)
+
+Home's Insights card shows up to five rule-based lines. `insight_facts(p_today)` (SQL) only aggregates; the rules, wording and thresholds are in `src/features/insights/rules.ts` (constants in `T`). Tapping a line opens the filtered Activity list or the entry it is about.
+
 ## Deploy
 Vercel (SPA rewrites in `vercel.json`) + a Supabase project: `supabase link --project-ref <ref> && supabase db push`.
 Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; configure auth Site URL / redirect URLs and a custom SMTP provider.

@@ -510,3 +510,15 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 **Not done / needs you:**
 - [ ] `supabase db push` for `20260109000001_profile_checks.sql` and `supabase functions deploy delete-account` (cloud actions, only after you approve), then a deletion check with a throwaway account on the deployed app.
 
+## Phase 8A status (updated 2026-11-06): Insights
+
+**Decisions:** Import (Firebase importer) is **dropped by decision**; Export (JSON + transactions CSV) was finished in 7B.
+
+**Built and verified locally:** migration `20260110000001_insights.sql` (`insight_facts(p_today)`: read-only aggregates, RLS applies, for-others spend excluded from personal spend); `features/insights/rules.ts` (rules 1 to 8, thresholds in one table `T`, ranked by importance, at most 5, each with a drill target) and the Insights card on Home (own lazy query under the `dashboard` key so every dashboard refresh refreshes it; hides itself when there is nothing to say; can be moved or hidden in Settings, Display). Rule 7 (budgets) works but stays quiet until the budgets screen exists (v1.1). Category and projection rules wait until day 5 of the month; category changes compare month-to-date with the same days of last month and need at least a 20% and ₹500 change.
+
+**Numbers:** 789 unit/component tests, 236 SQL/RLS tests (13 for `insight_facts`), 35 Playwright e2e tests (3 new), coverage 99.3% lines on `src/lib`. Initial JS 191.5 KB gz (budget 200). Two older e2e tests (loan transaction in Activity, Undo) timed out once in a full run and pass alone; same kind of one-off as the 7B flake, worth watching.
+
+**Not done / needs you:**
+- [ ] `supabase db push` for `20260110000001_insights.sql` (cloud, only after you approve).
+- [ ] Stage 8B (polish: contrast and dark mode, accessibility, animation, empty/error/offline states, performance and Lighthouse, scenarios A to E).
+
