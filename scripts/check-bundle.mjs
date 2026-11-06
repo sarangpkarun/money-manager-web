@@ -3,6 +3,7 @@
 import { readFile, readdir } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
+import { bundleSecrets, foreignHosts } from './security.mjs'
 
 const BUDGET = 200 * 1024
 const html = await readFile('dist/index.html', 'utf8')
@@ -23,11 +24,14 @@ async function* walk(dir) {
   }
 }
 let leaked = false
+const supabaseUrl = process.env.VITE_SUPABASE_URL
+const foreign = new Set()
 for await (const p of walk('dist')) {
-  if (!/\.(js|html|map)$/.test(p)) continue
-  if (/service_role/i.test(await readFile(p, 'utf8'))) {
-    console.error(`service_role found in ${p}`)
-    leaked = true
-  }
+  if (!/\.(js|html|css|webmanifest|map)$/.test(p)) continue
+  const text = await readFile(p, 'utf8')
+  for (const s of bundleSecrets(text)) { console.error(`${s} found in ${p}`); leaked = true }
+  for (const h of foreignHosts(text, supabaseUrl)) foreign.add(`${h} (${p})`)
 }
+// no trackers or third-party services: only the app's own Supabase host and documentation links may appear
+for (const f of foreign) { console.error(`unexpected external host: ${f}`); leaked = true }
 if (total > BUDGET || leaked) process.exit(1)

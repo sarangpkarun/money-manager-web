@@ -1,0 +1,6 @@
+export const ALLOWED_HOSTS: string[]
+export function hostsIn(text: string): string[]
+export function foreignHosts(text: string, supabaseUrl?: string): string[]
+export function jwtsIn(text: string): { role: string; iss: string; token: string }[]
+export function bundleSecrets(text: string): string[]
+export function fileSecrets(text: string): string[]
