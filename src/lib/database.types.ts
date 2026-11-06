@@ -488,6 +488,12 @@ isOneToOne: false
 "get_cron_secret":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"insight_facts":
+{ Args: { "p_today": string }; Returns: Json
+                           },
+"is_valid_timezone":
+{ Args: { "p_tz": string }; Returns: boolean
+                           },
 "is_verified":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
