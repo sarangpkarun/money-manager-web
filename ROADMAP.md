@@ -540,3 +540,33 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 
 **Not done / needs you (iPhone and accounts):** dark-mode readability on the phone, a VoiceOver spot check, airplane-mode launch, the reminder tests from 7A and the viewport gap from Phase 0; pushing everything to GitHub and Vercel.
 
+## Phase 9 status (updated 2026-11-06): hardening, monitoring, runbook (the two-week run is yours)
+
+**Built and verified locally** (nothing of this is on the cloud project yet):
+- **Database security audit** (`tests/rls/audit.test.ts`): every table has RLS and own-rows policies (or is explicitly service-only), anon has no table or function rights except the data-free `ping`, SECURITY DEFINER functions pin their search path, the private schema is closed, no storage buckets. It found real gaps, now fixed by `20260111000001_harden_grants.sql`: anon and signed-in users held TRUNCATE/TRIGGER/REFERENCES on every table (row level security does not cover those), and two trigger functions were callable as API functions.
+- **A real bug found by it:** `_plan_replace` raised its "plan changed, please reload" error with SQLSTATE 40001, which PostgREST 14 retries, so the request hangs instead of showing the message (it would have frozen the screen on a stale plan edit). Fixed by `20260112000001_plan_stale_error.sql`; the audit now forbids 40001 and 40P01.
+- **Security headers** in `vercel.json` (strict CSP, HSTS, no framing, no referrer, permissions policy), checked on the production build by Playwright (`pnpm e2e:prod`: every main screen, a write, an export, the service worker, no violations). That run found that zod compiled validators with `eval` (blocked by the CSP); sign-in and sign-up now use zod's interpreter.
+- **Bundle and repository checks:** build fails on a foreign host, a non-anon JWT, a secret key or a private key (`check-bundle`), `pnpm check:secrets` scans tracked files, `pnpm audit --prod` and the contrast check run in CI.
+- **Password policy** 8+ characters with letters and digits on the server (`config.toml`, tested against the auth service) and in the app.
+- **Cron function:** its auth is a tested helper, no CORS headers, no internals in errors.
+- **Own error log** (`20260113000001_monitoring.sql`, `client_errors`): errors are scrubbed in the browser (every digit, email and URL removed; property-tested), stored only in your project, own-rows RLS, append-only, 30 rows per 10 minutes per user, 60-day retention job, an error screen with Reload instead of a blank page, and Settings > About > Recent errors with Clear.
+- **Uptime and keep-alive:** `scripts/healthcheck.mjs` (page, CSP header, service worker, manifest, SPA route, auth health, database ping, reminder function refusing strangers) runs every 6 hours in GitHub Actions and keeps a free project awake.
+- **Backups on the free plan:** `pnpm backup` (schema + auth/public data + checksums) and `pnpm restore:drill`, which wipes the local database to migrations only, loads the dump and proves every table, balances, schedule totals and password hashes match and the account can sign in (passes).
+- **Data health report** (`scripts/health.sql`, `pnpm health:data`): 9 consistency checks that must be 0 and 4 things to eyeball; tested on clean and deliberately broken data.
+- **Branded email templates** (confirm, reset; no images or tracking) wired into `config.toml` and verified arriving locally.
+- **Docs:** `docs/RUNBOOK.md`, `docs/GOING-LIVE.md`, `docs/ISSUES.md`, README pointers.
+
+**Numbers:** 869 unit/component tests, 272 SQL tests, 45 Playwright tests plus 2 against the production build, coverage 99.2% lines on `src/lib`, initial JS 192.7 KB gz, Lighthouse (signed-in Home, mobile) 100/100/100/100, `pnpm audit --prod` clean.
+
+**Needs you (cloud and dashboard; I do the cloud commands only after your go-ahead):**
+- [ ] Back up the cloud database first (`pnpm backup`, needs the database password), then `supabase db push` for the three new migrations (20260111, 20260112, 20260113) and `supabase functions deploy send-reminders` (auth helper change).
+- [ ] Push to GitHub so Vercel deploys the headers and the new screens; add the GitHub variables `APP_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` and run the Health check workflow once.
+- [ ] Dashboard setup from `docs/RUNBOOK.md` section 2: auth URLs, email confirmation, password policy, custom SMTP with DNS records, email templates, rate limits, Vercel env vars including `VITE_VAPID_PUBLIC_KEY`.
+- [ ] The standing iPhone checks (reminders, dark mode, VoiceOver, viewport gap).
+
+**Exit criterion tracker** (two consecutive weeks, daily use, no data errors, no missed reminders). Fill one line per day; a failed day restarts the count after its fix.
+
+| Date | Entered something | Weekly reconcile matched (Sun) | Health report clean | Reminders on time, no duplicates | Notes / issue # |
+|---|---|---|---|---|---|
+| | | | | | |
+
