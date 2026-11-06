@@ -97,3 +97,13 @@ test('sign-in screen', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible()
   await audit(page, 'Sign in')
 })
+
+test('reduced motion: transitions and animations are effectively off', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  const login = page.getByRole('button', { name: 'Log in' })
+  await expect(login).toBeVisible()
+  await expect(login).toHaveCSS('transition-duration', '1e-05s') // 0.01 ms
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(login).not.toHaveCSS('transition-duration', '1e-05s')
+})
