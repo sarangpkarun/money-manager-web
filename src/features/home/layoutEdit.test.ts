@@ -21,7 +21,10 @@ describe('layoutToItems', () => {
     expect(items).toHaveLength(DEFAULT.length)
     expect(items.every((i) => i.label.length > 0)).toBe(true)
   })
-  it('the reserved insights card is not editable', () => expect(ids(layoutToItems({ order: ['insights'], hidden: ['insights'] }))).toEqual(DEFAULT))
+  it('insights can be moved and hidden like the other cards', () => {
+    expect(DEFAULT).toContain('insights')
+    expect(layoutToItems({ hidden: ['insights'] }).find((i) => i.id === 'insights')?.hidden).toBe(true)
+  })
 })
 
 describe('moveItem / toggleHidden', () => {

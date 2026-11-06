@@ -9,6 +9,7 @@ export const EDITABLE_CARDS: { id: CardId; label: string }[] = [
   { id: 'people', label: 'Money with people' },
   { id: 'emi_load', label: 'EMI & loan load' },
   { id: 'cards', label: 'Credit cards' },
+  { id: 'insights', label: 'Insights' },
   { id: 'recent', label: 'Recent activity' },
 ]
 const EDITABLE: readonly CardId[] = EDITABLE_CARDS.map((c) => c.id)

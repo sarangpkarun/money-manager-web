@@ -143,7 +143,7 @@ describe('Home cards editor', () => {
     ui(<DisplayScreen />)
     const switches = within(cards()).getAllByRole('switch')
     expect(switches.map((s) => s.getAttribute('aria-label'))).toEqual([
-      'Show This month', 'Show Where it went', 'Show Net position', 'Show Due soon', 'Show Money with people', 'Show EMI & loan load', 'Show Credit cards', 'Show Recent activity',
+      'Show This month', 'Show Where it went', 'Show Net position', 'Show Due soon', 'Show Money with people', 'Show EMI & loan load', 'Show Credit cards', 'Show Insights', 'Show Recent activity',
     ])
     expect(switches.every((s) => (s as HTMLInputElement).checked)).toBe(true)
     expect(within(cards()).getByRole('button', { name: 'Move This month up' })).toBeDisabled()
@@ -159,7 +159,7 @@ describe('Home cards editor', () => {
     await user.click(within(cards()).getByRole('switch', { name: 'Show Credit cards' }))
     await user.click(within(cards()).getByRole('button', { name: 'Save layout' }))
     expect(m.save).toHaveBeenCalledWith({
-      dashboard_layout: { order: ['this_month', 'where_it_went', 'net_position', 'due_soon', 'people', 'recent', 'emi_load', 'cards'], hidden: ['cards'] },
+      dashboard_layout: { order: ['this_month', 'where_it_went', 'net_position', 'due_soon', 'people', 'emi_load', 'recent', 'cards', 'insights'], hidden: ['cards'] },
     })
     expect(useToasts.getState().toasts[0]?.message).toBe('Home layout saved')
   })

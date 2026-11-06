@@ -12,6 +12,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
 import { CardsCard, DueSoonCard, EmiLoadCard, NetPositionCard, PeopleCard, RecentCard, ThisMonthCard, WhereItWentCard, type Drill } from './cards'
 import type { DueSoonItem } from './dashboardTypes'
+import { InsightsCard } from '@/features/insights/InsightsCard'
 import { applyLayout, type CardId } from './layout'
 import { useDashboard } from './queries'
 import { useHomeFilters } from './useHomeFilters'
@@ -45,7 +46,7 @@ export default function HomeScreen() {
   }
   const seeAll = () => drill({})
 
-  const order = useMemo(() => applyLayout(profile?.dashboard_layout, ['this_month', 'where_it_went', 'net_position', 'due_soon', 'people', 'emi_load', 'cards', 'recent']), [profile?.dashboard_layout])
+  const order = useMemo(() => applyLayout(profile?.dashboard_layout, ['this_month', 'where_it_went', 'net_position', 'due_soon', 'people', 'emi_load', 'cards', 'insights', 'recent']), [profile?.dashboard_layout])
   const empty = !!d && d.month.count === 0 && d.recent.length === 0
 
   const render = (id: CardId) => {
@@ -58,6 +59,7 @@ export default function HomeScreen() {
       case 'due_soon': return <DueSoonCard key={id} d={d} today={today} onPay={setPay} onOpen={(eid) => navigate(`/money/entry/${eid}`)} />
       case 'emi_load': return <EmiLoadCard key={id} d={d} today={today} onOpen={() => navigate('/money')} />
       case 'cards': return <CardsCard key={id} d={d} drill={drill} today={today} />
+      case 'insights': return <InsightsCard key={id} today={today} />
       case 'recent': return <RecentCard key={id} d={d} onSeeAll={seeAll} />
       default: return null // reserved for later phases
     }

@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUi } from '@/lib/uiStore'
+import { EMPTY_FACTS } from '@/features/insights/rules'
 import type { Dashboard } from './dashboardTypes'
 
 const CASH = '11111111-1111-4111-8111-111111111111'
@@ -10,12 +11,13 @@ const CARD = '33333333-3333-4333-8333-333333333333'
 const FOOD = '44444444-4444-4444-8444-444444444444'
 
 const m = vi.hoisted(() => ({
-  data: undefined as unknown, isError: false, refetch: vi.fn(), args: [] as unknown[][], layout: null as unknown,
+  data: undefined as unknown, isError: false, refetch: vi.fn(), args: [] as unknown[][], layout: null as unknown, insights: undefined as unknown,
 }))
 
 vi.mock('./queries', () => ({
   useDashboard: (...a: unknown[]) => { m.args.push(a); return { data: m.data, isError: m.isError, refetch: m.refetch } },
 }))
+vi.mock('@/features/insights/queries', () => ({ useInsightFacts: () => ({ data: m.insights }) }))
 vi.mock('@/features/profile/useProfile', () => ({ useProfile: () => ({ data: { name: 'Sarang', dashboard_layout: m.layout } }) }))
 vi.mock('@/features/profile/useToday', () => ({ useToday: () => '2026-11-10', useWeekStart: () => 1 }))
 vi.mock('@/features/accounts/queries', () => ({ useAccounts: () => ({ data: [{ id: CASH, name: 'Cash', archived: false }] }) }))
@@ -54,7 +56,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  m.data = dash(); m.isError = false; m.args = []; m.layout = null
+  m.data = dash(); m.isError = false; m.args = []; m.layout = null; m.insights = undefined
   localStorage.clear()
   useUi.setState({ month: '2026-11', homeSearch: '', activitySearch: '' })
 })
@@ -171,6 +173,27 @@ describe('Home dashboard', () => {
     ui()
     const names = screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))
     expect(names).toEqual(['Recent activity', 'This month', 'Credit cards'])
+  })
+
+  it('Insights card: shows nothing without insights; with facts it lists them and a tap drills to the filtered Activity', async () => {
+    const user = userEvent.setup()
+    ui()
+    expect(screen.queryByRole('region', { name: 'Insights' })).toBeNull()
+    cleanup()
+    m.insights = { ...EMPTY_FACTS, month: { spent_paise: 0, prev_total_paise: 0, days_elapsed: 10, days_in_month: 30 }, categories: [{ id: FOOD, name: 'Food', this_paise: 1_320_000, prev_to_date_paise: 1_000_000 }] }
+    ui()
+    const card = screen.getByRole('region', { name: 'Insights' })
+    await user.click(within(card).getByRole('button', { name: /Food spend up 32% vs October so far/ }))
+    expect(screen.getByTestId('where')).toHaveTextContent(`/activity?cat=${FOOD}&d=month&type=spend`)
+    expect(useUi.getState().activitySearch).toBe(`?cat=${FOOD}&d=month&type=spend`)
+  })
+
+  it('an insight about a person opens that entry', async () => {
+    const user = userEvent.setup()
+    m.insights = { ...EMPTY_FACTS, people_overdue: [{ person_id: 'p', name: 'Arun', overdue_paise: 1_000_000, days_late: 12, entry_id: 'e-1' }] }
+    ui()
+    await user.click(screen.getByRole('button', { name: 'Arun is 12 days late on ₹10,000' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/money/entry/e-1')
   })
 
   it('the avatar links to Settings', () => {
