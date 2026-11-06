@@ -112,4 +112,11 @@ describe('database security audit', () => {
       expect(r.find((x) => x.role === 'anon')?.x, `${t} for anon`).toBe(false)
     }
   })
+
+  it('no function raises SQLSTATE 40001 or 40P01 (PostgREST retries those, so the request would hang instead of showing the error)', async () => {
+    const f = await rows<{ proname: string }>(
+      `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname in ('public', 'private') and p.prosrc ~* '(errcode\\s*=\\s*''(40001|40P01)''|sqlstate\\s+''(40001|40P01)'')'`)
+    expect(f.map((x) => x.proname)).toEqual([])
+  })
 })
