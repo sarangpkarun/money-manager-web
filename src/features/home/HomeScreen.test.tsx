@@ -97,7 +97,7 @@ describe('Home dashboard', () => {
   it('drills a category into Activity with the same month filters', async () => {
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: /^Food, ₹300/ }))
+    await user.click(screen.getByRole('button', { name: /^Food/ }))
     expect(screen.getByTestId('where')).toHaveTextContent(`/activity?cat=${FOOD}`)
     expect(useUi.getState().activitySearch).toBe(`?cat=${FOOD}`)
   })
@@ -108,7 +108,7 @@ describe('Home dashboard', () => {
     expect(screen.queryByRole('button', { name: /Uncategorised/ })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Place' }))
     expect(screen.queryByRole('button', { name: /No place/ })).toBeNull()
-    await user.click(screen.getByRole('button', { name: /^Cafe, ₹300/ }))
+    await user.click(screen.getByRole('button', { name: /^Cafe/ }))
     expect(screen.getByTestId('where')).toHaveTextContent('/activity?place=Cafe')
   })
 
@@ -134,7 +134,7 @@ describe('Home dashboard', () => {
     const user = userEvent.setup()
     ui()
     const card = screen.getByRole('region', { name: 'Recent activity' })
-    expect(within(card).getByRole('button', { name: 'Lunch, open details' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: /^Lunch.*open details/ })).toBeInTheDocument()
     await user.click(within(card).getByRole('button', { name: 'See all' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/activity')
   })
@@ -277,7 +277,7 @@ describe('Home dashboard', () => {
     const user = userEvent.setup()
     m.data = withPlans()
     ui()
-    await user.click(screen.getByRole('button', { name: 'From Ravi, Ravi, open details' }))
+    await user.click(screen.getByRole('button', { name: /^From Ravi, Ravi.*open details/ }))
     expect(screen.getByTestId('where')).toHaveTextContent('/money/entry/e1')
   })
 

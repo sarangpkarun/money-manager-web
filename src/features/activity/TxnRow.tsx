@@ -23,7 +23,7 @@ export function TxnRow({ row, onOpen }: { row: ActivityRow; onOpen: () => void }
   const sub = [row.place, row.kind === 'transfer' ? null : row.account_name].filter(Boolean).join(' · ')
   const badge = pendingBadge(row.others)
   return (
-    <button onClick={onOpen} className="flex min-h-16 w-full items-center gap-3 px-4 py-2 text-left" aria-label={`${rowTitle(row)}, open details`}>
+    <button onClick={onOpen} className="flex min-h-16 w-full items-center gap-3 px-4 py-2 text-left">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg"
             style={{ background: `${row.category_color ?? '#64748b'}26` }} aria-hidden>{icon}</span>
       <span className="min-w-0 flex-1">
@@ -33,6 +33,7 @@ export function TxnRow({ row, onOpen }: { row: ActivityRow; onOpen: () => void }
         )}
       </span>
       <Amount paise={row.amount_paise} tone={tone} sign={tone !== 'neutral'} className="shrink-0 font-semibold" />
+      <span className="sr-only">, open details</span>
     </button>
   )
 }

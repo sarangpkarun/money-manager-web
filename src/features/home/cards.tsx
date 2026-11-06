@@ -123,7 +123,7 @@ export function WhereItWentCard({ d, drill }: { d: Dashboard; drill: Drill }) {
                 <li key={`${r.id ?? r.name}-${i}`}>
                   <BarRow fraction={fractions[i] ?? 0} color={colors[i]!}>
                     {drillable(r)
-                      ? <button className="block w-full" onClick={() => drillTo(r)} aria-label={`${r.name}, ${formatMoney(r.spent)}, ${r.pct}%. Show transactions`}>{inner}</button>
+                      ? <button className="block w-full" onClick={() => drillTo(r)}>{inner}<span className="sr-only">, show transactions</span></button>
                       : inner}
                   </BarRow>
                 </li>

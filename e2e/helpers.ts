@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import { admin, deleteUser, sql } from '../tests/rls/helpers'
 
 export interface E2EUser { id: string; email: string; password: string }
@@ -31,4 +31,13 @@ export const shiftDate = (d: string, days: number): string => {
   const t = new Date(`${d}T00:00:00Z`)
   t.setUTCDate(t.getUTCDate() + days)
   return t.toISOString().slice(0, 10)
+}
+
+/**
+ * Clicks a list row once it has settled in the viewport. Lists draw their first frame before layout (a row can sit far below the
+ * screen for a few frames), and a click aimed at that first element can lose it when the list redraws.
+ */
+export async function tap(row: Locator) {
+  await expect(row).toBeInViewport()
+  await row.click()
 }

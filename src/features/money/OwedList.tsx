@@ -47,7 +47,7 @@ export function OwedList({ direction, entries, today, onOpen, onAdd }: {
               const pct = e.total_paise > 0 ? Math.min(100, Math.round((e.paid_paise * 100) / e.total_paise)) : 0
               return (
                 <li key={e.id}>
-                  <button onClick={() => onOpen(e.id)} aria-label={`${e.title}, ${g.name}, ${status}, open details`} className="block min-h-16 w-full px-4 py-3 text-left">
+                  <button onClick={() => onOpen(e.id)} className="block min-h-16 w-full px-4 py-3 text-left">
                     <span className="flex items-center justify-between gap-2">
                       <span className="min-w-0 truncate font-medium">{e.title}{KIND_TAG[e.kind] ? <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-xs font-normal text-muted">{KIND_TAG[e.kind]}</span> : null}</span>
                       <Amount paise={e.outstanding_paise} className="shrink-0 font-semibold" />

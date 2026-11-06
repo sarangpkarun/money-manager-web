@@ -26,7 +26,7 @@ export default function PrivacyScreen() {
           <p>A cached copy of your data and your display choices are kept in the browser so the app opens fast. Logging out clears them.</p>
         </Block>
         <Block title="Your control">
-          <p><Link to="/settings/export" className="text-accent">Export</Link> everything at any time, or <Link to="/settings/delete" className="text-money-red">delete your account</Link> to remove your sign-in and every row permanently.</p>
+          <p><Link to="/settings/export" className="text-accent underline">Export</Link> everything at any time, or <Link to="/settings/delete" className="text-money-red underline">delete your account</Link> to remove your sign-in and every row permanently.</p>
         </Block>
       </div>
     </div>

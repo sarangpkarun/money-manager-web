@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createUser, deleteUser, login, type E2EUser } from './helpers'
+import { createUser, deleteUser, login, type E2EUser, tap } from './helpers'
 
 let user: E2EUser
 test.beforeAll(async () => { user = await createUser('qa') })
@@ -24,7 +24,7 @@ test('scenario E: + → 120 → Food → Save (3 taps) appears in Activity', asy
   await page.getByRole('link', { name: 'Activity' }).click()
 
   await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible() // Home keeps its own rows mounted but hidden
-  const row = page.getByRole('button', { name: 'Food, open details' })
+  const row = page.getByRole('button', { name: /^Food.*open details/ })
   await expect(row).toBeVisible()
   await expect(row).toContainText('−₹120')
   await expect(page.getByText('Today')).toBeVisible()
@@ -40,13 +40,13 @@ test('Undo removes the transaction again', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByRole('link', { name: 'Activity' }).click()
   await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible() // Home keeps its own rows mounted but hidden
-  await expect(page.getByRole('button', { name: 'Groceries, open details' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Groceries.*open details/ })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Groceries, open details' }).click()
+  await tap(page.getByRole('button', { name: /^Groceries.*open details/ }))
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
-  await expect(page.getByRole('button', { name: 'Groceries, open details' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Groceries.*open details/ })).toHaveCount(0)
   await page.getByRole('status').filter({ hasText: 'Deleted' }).getByRole('button', { name: 'Undo' }).click()
-  await expect(page.getByRole('button', { name: 'Groceries, open details' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Groceries.*open details/ })).toBeVisible()
 })
 
 test('a transfer to a credit card pays the bill and balances follow', async ({ page }) => {
@@ -61,7 +61,7 @@ test('a transfer to a credit card pays the bill and balances follow', async ({ p
   await dialog.getByLabel('Already owed on this card (₹)').fill('5000')
   await dialog.getByLabel('Credit limit (₹)').fill('20000')
   await dialog.getByRole('button', { name: 'Save' }).click()
-  await expect(page.getByRole('button', { name: 'Edit HDFC Card' })).toContainText('Owed ₹5,000')
+  await expect(page.getByRole('button', { name: /^Edit HDFC Card/ })).toContainText('Owed ₹5,000')
 
   await page.goto('/')
   await page.getByRole('button', { name: 'Quick add' }).click()
@@ -72,5 +72,5 @@ test('a transfer to a credit card pays the bill and balances follow', async ({ p
   await expect(page.getByRole('status')).toContainText('Added ₹2,000')
 
   await page.goto('/settings/accounts')
-  await expect(page.getByRole('button', { name: 'Edit HDFC Card' })).toContainText('Owed ₹3,000')
+  await expect(page.getByRole('button', { name: /^Edit HDFC Card/ })).toContainText('Owed ₹3,000')
 })

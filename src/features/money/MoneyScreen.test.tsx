@@ -110,7 +110,7 @@ describe('Money tab', () => {
   it('tapping an entry opens its detail', async () => {
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: /^Phone loan, Meera, pending/ }))
+    await user.click(screen.getByRole('button', { name: /^Phone loan/ }))
     expect(screen.getByTestId('where')).toHaveTextContent('/money/entry/e2')
   })
 
@@ -132,7 +132,7 @@ describe('Money tab', () => {
     m.history = [h]
     ui()
     await user.click(screen.getByRole('tab', { name: 'History' }))
-    const row = screen.getByRole('button', { name: 'Old loan, Ravi, settled, open details' })
+    const row = screen.getByRole('button', { name: /^Old loan/ })
     expect(row).toHaveTextContent('Paid')
     expect(row).toHaveTextContent('Yesterday')
     await user.click(row)

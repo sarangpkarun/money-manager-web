@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { appToday, createUser, deleteUser, login, shiftDate, type E2EUser } from './helpers'
+import { appToday, createUser, deleteUser, login, shiftDate, type E2EUser, tap } from './helpers'
 
 let user: E2EUser
 test.beforeEach(async () => { user = await createUser('cal') })
@@ -36,7 +36,7 @@ test('scenario B in the Calendar: #2 paid early shows a blue ✓ on its due date
   // pay #2 now (early)
   await page.getByRole('link', { name: 'Money' }).click()
   await page.getByRole('tab', { name: 'I owe' }).click()
-  await page.getByRole('button', { name: /^Borrowed from Ravi/ }).click()
+  await tap(page.getByRole('button', { name: /^Borrowed from Ravi/ }))
   await page.getByRole('button', { name: 'Pay instalment 2' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Pay', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Instalments' })).toContainText('1 of 10 paid')
@@ -85,7 +85,8 @@ test('scenario D in the Calendar: row 3 paid two days late shows an amber ✓ on
   await expect(page.getByRole('status').filter({ hasText: 'in 4 instalments' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Money' }).click()
-  await page.getByRole('button', { name: /^Lent to Asha/ }).click()
+  await expect(page.getByRole('heading', { name: 'Money' })).toBeVisible() // the Home tab stays mounted for a moment: wait for the switch
+  await tap(page.getByRole('button', { name: /^Lent to Asha/ }))
   await page.getByRole('button', { name: 'Pay instalment 3' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Receive', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Instalments' })).toContainText('Paid late (2 days)')

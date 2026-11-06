@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { appToday, createUser, deleteUser, login, sql, type E2EUser } from './helpers'
+import { appToday, createUser, deleteUser, login, sql, type E2EUser, tap } from './helpers'
 
 let user: E2EUser
 test.beforeEach(async () => { user = await createUser('oth') })
@@ -48,7 +48,7 @@ test('scenario A: ₹30,000 on the card for Arun: spend ₹0, card +₹30,000, �
   // Activity: the badge, the gross amount, and the day total counts your share (₹0)
   await page.getByRole('link', { name: 'Activity' }).click()
   await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible()
-  const row = page.getByRole('button', { name: 'Dinner, open details' }).filter({ hasText: '₹30,000' })
+  const row = page.getByRole('button', { name: /^Dinner.*open details/ }).filter({ hasText: '₹30,000' })
   await expect(row).toContainText('₹30,000 pending from Arun')
   await expect(page.getByLabel('Totals')).toContainText('₹0') // spent
 
@@ -58,7 +58,7 @@ test('scenario A: ₹30,000 on the card for Arun: spend ₹0, card +₹30,000, �
   await expect(page.getByRole('region', { name: 'Summary' })).toContainText('₹30,000')
 
   // Arun pays ₹10,000 by UPI
-  await page.getByRole('button', { name: /^Dinner, Arun, pending/ }).click()
+  await tap(page.getByRole('button', { name: /^Dinner/ }))
   await expect(page.getByRole('region', { name: 'Linked purchase' })).toContainText('your share ₹0')
   await page.getByRole('button', { name: 'Receive money' }).click()
   let pay = page.getByRole('dialog')
@@ -81,9 +81,9 @@ test('scenario A: ₹30,000 on the card for Arun: spend ₹0, card +₹30,000, �
   // the badge is gone from Activity and the entry sits in History
   await page.getByRole('link', { name: '‹ Money' }).click()
   await page.getByRole('tab', { name: 'History' }).click()
-  await expect(page.getByRole('button', { name: /^Dinner, Arun, settled/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Dinner/ })).toBeVisible()
   await page.getByRole('link', { name: 'Activity' }).click()
-  await expect(page.getByRole('button', { name: 'Dinner, open details' }).filter({ hasText: '₹30,000' })).not.toContainText('pending from') // the two repayments share its title
+  await expect(page.getByRole('button', { name: /^Dinner.*open details/ }).filter({ hasText: '₹30,000' })).not.toContainText('pending from') // the two repayments share its title
   // spending never moved through any of it
   await expect(page.getByLabel('Totals')).toContainText('₹0')
 })
@@ -112,7 +112,8 @@ test('deleting the purchase is blocked once a friend has paid, then works (with 
 
   // Arun pays ₹250
   await page.getByRole('link', { name: 'Money' }).click()
-  await page.getByRole('button', { name: /^Lunch, Arun, pending/ }).click()
+  await expect(page.getByRole('heading', { name: 'Money' })).toBeVisible() // the Home tab stays mounted for a moment: wait for the switch
+  await tap(page.getByRole('button', { name: /^Lunch/ }))
   await page.getByRole('button', { name: 'Receive money' }).click()
   await page.getByRole('dialog').getByLabel('Amount').fill('250')
   await page.getByRole('dialog').getByRole('button', { name: 'Receive', exact: true }).click()
@@ -121,7 +122,7 @@ test('deleting the purchase is blocked once a friend has paid, then works (with 
 
   // delete from Activity: blocked with an explanation, nothing changes
   await page.getByRole('link', { name: 'Activity' }).click()
-  const purchase = page.getByRole('button', { name: 'Lunch, open details' }).filter({ hasText: '₹1,000' }) // the ₹250 repayment has the same title
+  const purchase = page.getByRole('button', { name: /^Lunch.*open details/ }).filter({ hasText: '₹1,000' }) // the ₹250 repayment has the same title
   await purchase.click()
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByRole('status').filter({ hasText: /Arun has already paid ₹250\. Delete those payments first\./ })).toBeVisible()
@@ -130,7 +131,7 @@ test('deleting the purchase is blocked once a friend has paid, then works (with 
   // remove the payment from the entry, then delete the purchase
   await purchase.click()
   await page.getByRole('dialog').getByRole('button', { name: 'Open entry for Arun' }).click()
-  await page.getByRole('button', { name: /^Delete payment of/ }).click()
+  await tap(page.getByRole('button', { name: /^Delete payment of/ }))
   await expect(page.getByRole('region', { name: 'Progress' })).toContainText('Pending')
   await page.getByRole('link', { name: '‹ Money' }).click()
   await page.getByRole('link', { name: 'Activity' }).click()
@@ -155,11 +156,11 @@ test('the "not returned yet" filter lists only purchases a friend still owes on'
   await expect(page.getByRole('status').filter({ hasText: /Added ₹50(?!\d)/ })).toBeVisible()
 
   await page.getByRole('link', { name: 'Activity' }).click()
-  await expect(page.getByRole('button', { name: 'PlainTea, open details' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^PlainTea.*open details/ })).toBeVisible()
   await page.getByRole('button', { name: 'Filters' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Paid for others, not returned yet' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Apply' }).click()
   await expect(page).toHaveURL(/others=pending/)
-  await expect(page.getByRole('button', { name: 'PendingBill, open details' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'PlainTea, open details' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^PendingBill.*open details/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^PlainTea.*open details/ })).toHaveCount(0)
 })

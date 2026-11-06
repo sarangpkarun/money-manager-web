@@ -176,7 +176,7 @@ describe('Day sheet', () => {
     const s = within(dialog).getByRole('region', { name: 'Spending & income' })
     expect(s).toHaveTextContent('Lunch')
     expect(s).toHaveTextContent('Tea')
-    await user.click(within(s).getByRole('button', { name: 'Lunch, open details' }))
+    await user.click(within(s).getByRole('button', { name: /^Lunch.*open details/ }))
     expect(screen.getByTestId('where')).toHaveTextContent('/activity?d=custom&from=2026-11-01&to=2026-11-01')
     expect(useUi.getState().activitySearch).toBe('?d=custom&from=2026-11-01&to=2026-11-01')
   })
@@ -230,7 +230,7 @@ describe('Day sheet', () => {
     const user = userEvent.setup()
     ui()
     await user.click(cell(/^3 Nov, 1 overdue/))
-    await user.click(await screen.findByRole('button', { name: 'Loan, instalment 1, open details' }))
+    await user.click(await screen.findByRole('button', { name: /^Loan, instalment 1.*open details/ }))
     expect(screen.getByTestId('where')).toHaveTextContent('/money/entry/e1')
   })
 

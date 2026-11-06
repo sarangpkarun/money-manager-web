@@ -56,7 +56,7 @@ test('search finds one row among 5,000 quickly', async ({ page }) => {
 
   const t0 = Date.now()
   await page.getByLabel('Search transactions').fill('Item 4999')
-  await expect(page.getByRole('button', { name: 'Item 4999, open details' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Item 4999.*open details/ })).toBeVisible()
   const total = Date.now() - t0
   console.log(`search: server ${durations.join('/')} ms, end-to-end ${total} ms (includes the 250 ms debounce, dev build)`)
   expect(durations.length).toBeGreaterThan(0)

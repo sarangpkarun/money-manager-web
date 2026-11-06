@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createUser, deleteUser, login, sql, type E2EUser } from './helpers'
+import { createUser, deleteUser, login, sql, type E2EUser, tap } from './helpers'
 
 let user: E2EUser
 test.beforeEach(async () => { user = await createUser('money') })
@@ -33,7 +33,7 @@ test('lend ₹10,000 → part pay ₹4,000 → settle ₹6,000: statuses, histor
   await expect(page.getByRole('region', { name: 'Summary' })).toContainText('₹10,000')
 
   // part payment
-  await page.getByRole('button', { name: /^Lent to Ravi, Ravi, pending/ }).click()
+  await tap(page.getByRole('button', { name: /^Lent to Ravi/ }))
   await expect(page.getByRole('region', { name: 'Progress' })).toContainText('₹10,000')
   await page.getByRole('button', { name: 'Receive money' }).click()
   const sheet = page.getByRole('dialog')
@@ -60,7 +60,7 @@ test('lend ₹10,000 → part pay ₹4,000 → settle ₹6,000: statuses, histor
   await expect(page.getByRole('heading', { name: 'Money' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Ravi' })).toHaveCount(0)
   await page.getByRole('tab', { name: 'History' }).click()
-  await expect(page.getByRole('button', { name: /^Lent to Ravi, Ravi, settled/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Lent to Ravi/ })).toBeVisible()
 
   // loans never count as spending
   await page.getByRole('link', { name: 'Activity' }).click()
@@ -73,13 +73,14 @@ test('deleting a payment reverses it; the entry reopens and the balance returns'
   await login(page, user)
   await lend(page, 'Meera', '500')
   await page.getByRole('link', { name: 'Money' }).click()
-  await page.getByRole('button', { name: /^Lent to Meera, Meera, pending/ }).click()
+  await expect(page.getByRole('heading', { name: 'Money' })).toBeVisible() // the Home tab stays mounted for a moment: wait for the switch
+  await tap(page.getByRole('button', { name: /^Lent to Meera/ }))
   await page.getByRole('button', { name: 'Receive money' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Receive', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Progress' })).toContainText('Paid')
   expect(await cashBalance()).toBe(100_000)
 
-  await page.getByRole('button', { name: /^Delete payment of/ }).click()
+  await tap(page.getByRole('button', { name: /^Delete payment of/ }))
   await expect(page.getByRole('region', { name: 'Progress' })).toContainText('Pending')
   expect(await cashBalance()).toBe(50_000)
 
@@ -94,7 +95,7 @@ test('a loan transaction in Activity points at the loan instead of offering Dele
   await lend(page, 'Asha', '250')
   await page.getByRole('link', { name: 'Activity' }).click()
   await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible()
-  await page.getByRole('button', { name: 'Lent to Asha, open details' }).click()
+  await tap(page.getByRole('button', { name: /^Lent to Asha.*open details/ }))
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Delete' })).toHaveCount(0)
   await page.getByRole('dialog').getByRole('button', { name: 'Open entry' }).click()
   await expect(page).toHaveURL(/\/money\/entry\//)

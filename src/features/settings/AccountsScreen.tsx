@@ -21,7 +21,8 @@ function AccountRow({ a, bal, first, last, onEdit, onMove }: {
   const bps = card ? utilisationBps(bal?.outstanding_paise, a.credit_limit_paise) : null
   return (
     <li className="flex items-stretch gap-2 rounded-2xl bg-surface p-3">
-      <button onClick={onEdit} className="min-h-11 flex-1 text-left" aria-label={`Edit ${a.name}`}>
+      <button onClick={onEdit} className="min-h-11 flex-1 text-left">
+        <span className="sr-only">Edit </span>
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full" style={{ background: a.color ?? '#64748b' }} aria-hidden />
           <span className="font-semibold">{a.name}</span>

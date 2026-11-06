@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { appToday, createUser, deleteUser, login, shiftDate, sql, type E2EUser } from './helpers'
+import { appToday, createUser, deleteUser, login, shiftDate, sql, tap, type E2EUser } from './helpers'
 
 let user: E2EUser
 test.beforeEach(async () => { user = await createUser('plans') })
@@ -12,7 +12,7 @@ async function openEntry(page: Page, tab: 'Owed to me' | 'I owe', name: RegExp) 
   await page.getByRole('link', { name: 'Money' }).click()
   await expect(page.getByRole('heading', { name: 'Money' })).toBeVisible()
   await page.getByRole('tab', { name: tab }).click()
-  await page.getByRole('button', { name }).click()
+  await tap(page.getByRole('button', { name }))
   await expect(page.getByRole('region', { name: 'Instalments' })).toBeVisible()
 }
 
@@ -33,7 +33,7 @@ test('scenario B: borrow ₹50,000 in 10 instalments, #2 paid early', async ({ p
   await expect(page.getByRole('status').filter({ hasText: 'in 10 instalments' })).toBeVisible()
   expect(await balance('Cash')).toBe(5_000_000) // borrowed money arrives
 
-  await openEntry(page, 'I owe', /^Borrowed from Ravi, Ravi, pending/)
+  await openEntry(page, 'I owe', /^Borrowed from Ravi/)
   const list = page.getByRole('region', { name: 'Instalments' })
   await expect(list).toContainText('0 of 10 paid')
   await expect(list.getByRole('listitem')).toHaveCount(10)
@@ -77,7 +77,7 @@ test('scenario C: ₹60,000 EMI, ₹6,000 down, 9 months, no-cost', async ({ pag
   await expect(page.getByRole('status').filter({ hasText: 'Phone: 9 × ₹6,000' })).toBeVisible()
   expect(await balance('Cash')).toBe(-600_000) // only the down payment has left the account
 
-  await openEntry(page, 'I owe', /^Phone, Croma, pending/)
+  await openEntry(page, 'I owe', /^Phone/)
   const list = page.getByRole('region', { name: 'Instalments' })
   await expect(list.getByRole('listitem')).toHaveCount(9)
   await expect(page.getByText('No-cost EMI (no interest)')).toBeVisible()
@@ -95,7 +95,7 @@ test('scenario C: ₹60,000 EMI, ₹6,000 down, 9 months, no-cost', async ({ pag
   await page.getByRole('link', { name: '‹ Money' }).click()
   await page.getByRole('link', { name: 'Activity' }).click()
   await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible()
-  await page.getByRole('button', { name: 'Phone, open details' }).first().click()
+  await page.getByRole('button', { name: /^Phone.*open details/ }).first().click()
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Delete' })).toHaveCount(0)
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Open entry' })).toBeVisible()
 })
@@ -118,7 +118,7 @@ test('scenario D: lend ₹2,000 weekly 4 × ₹500, pay row 3 first, two days la
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'in 4 instalments' })).toBeVisible()
 
-  await openEntry(page, 'Owed to me', /^Lent to Asha, Asha, overdue/)
+  await openEntry(page, 'Owed to me', /^Lent to Asha/)
   const list = page.getByRole('region', { name: 'Instalments' })
   await expect(list.getByRole('listitem').nth(0)).toContainText('Overdue')
   await page.getByRole('button', { name: 'Pay instalment 3' }).click()
@@ -142,7 +142,7 @@ test('skip month and extra payment change the plan and are recorded', async ({ p
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'in 4 instalments' })).toBeVisible()
 
-  await openEntry(page, 'I owe', /^Borrowed from Meera, Meera, pending/)
+  await openEntry(page, 'I owe', /^Borrowed from Meera/)
   const list = page.getByRole('region', { name: 'Instalments' })
   const lastBefore = (await list.getByRole('listitem').last().textContent()) ?? ''
 

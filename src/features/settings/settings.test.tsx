@@ -40,9 +40,9 @@ const ui = () => render(<MemoryRouter><AccountsScreen /></MemoryRouter>)
 describe('Accounts screen', () => {
   it('lists active accounts with balances and credit-card utilisation; archived are tucked away', () => {
     ui()
-    const cash = screen.getByRole('button', { name: 'Edit Cash' })
+    const cash = screen.getByRole('button', { name: /^Edit Cash/ })
     expect(cash).toHaveTextContent('₹1,234')
-    const card = screen.getByRole('button', { name: 'Edit HDFC Card' })
+    const card = screen.getByRole('button', { name: /^Edit HDFC Card/ })
     expect(card).toHaveTextContent('Owed ₹32,000')
     expect(within(card).getByRole('img')).toHaveAccessibleName('32% of limit used')
     expect(screen.queryByText('Old Wallet')).toBeNull()
@@ -91,7 +91,7 @@ describe('Accounts screen', () => {
   it('editing offers archive', async () => {
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: 'Edit Cash' }))
+    await user.click(screen.getByRole('button', { name: /^Edit Cash/ }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByLabelText('Name')).toHaveValue('Cash')
     await user.click(within(dialog).getByRole('button', { name: 'Archive account' }))

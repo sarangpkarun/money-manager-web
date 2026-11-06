@@ -80,11 +80,11 @@ describe('Activity list', () => {
     ui()
     expect(screen.getByText('Today')).toBeInTheDocument()
     expect(screen.getByText('Yesterday')).toBeInTheDocument()
-    const lunch = screen.getByRole('button', { name: 'Lunch, open details' })
+    const lunch = screen.getByRole('button', { name: /^Lunch.*open details/ })
     expect(lunch).toHaveTextContent('−₹250')
     expect(lunch).toHaveTextContent('Cafe Blue · Cash')
-    expect(screen.getByRole('button', { name: 'Bonus, open details' })).toHaveTextContent('+₹5,000')
-    expect(screen.getByRole('button', { name: 'Bank → Cash, open details' })).toHaveTextContent('₹1,000') // transfer: no sign
+    expect(screen.getByRole('button', { name: /^Bonus.*open details/ })).toHaveTextContent('+₹5,000')
+    expect(screen.getByRole('button', { name: /^Bank → Cash.*open details/ })).toHaveTextContent('₹1,000') // transfer: no sign
     expect(screen.getByText('₹250 spent')).toBeInTheDocument()
   })
 
@@ -175,7 +175,7 @@ describe('row actions', () => {
   it('tapping a row opens the detail sheet with the full details', async () => {
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: 'Lunch, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Lunch.*open details/ }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('Cafe Blue')).toBeInTheDocument()
     expect(within(dialog).getByText('Food')).toBeInTheDocument()
@@ -185,7 +185,7 @@ describe('row actions', () => {
   it('Delete removes the row, shows Undo, and Undo restores the original', async () => {
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: 'Lunch, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Lunch.*open details/ }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(m.del).toHaveBeenCalledWith('1'))
     const toast = await screen.findByRole('status')
@@ -198,7 +198,7 @@ describe('row actions', () => {
     m.del.mockRejectedValueOnce(new Error('offline'))
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: 'Taxi, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Taxi.*open details/ }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(useToasts.getState().toasts[0]?.message).toContain("Couldn't delete: offline"))
   })
@@ -206,7 +206,7 @@ describe('row actions', () => {
   it('Edit opens Quick Add on that transaction', async () => {
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: 'Lunch, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Lunch.*open details/ }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Edit' }))
     const s = useUi.getState()
     expect(s.quickAddOpen).toBe(true)
@@ -216,7 +216,7 @@ describe('row actions', () => {
   it('a transfer detail shows From and To', async () => {
     const user = userEvent.setup()
     ui()
-    await user.click(screen.getByRole('button', { name: 'Bank → Cash, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Bank → Cash.*open details/ }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('From')).toBeInTheDocument()
     expect(within(dialog).getByText('To')).toBeInTheDocument()
@@ -231,13 +231,13 @@ describe('purchases paid for others', () => {
   it('the row says who still owes how much, in the second line', () => {
     withFriends()
     ui()
-    expect(screen.getByRole('button', { name: 'Dinner, open details' })).toHaveTextContent('HDFC Card · ₹20,000 pending from Arun')
+    expect(screen.getByRole('button', { name: /^Dinner.*open details/ })).toHaveTextContent('HDFC Card · ₹20,000 pending from Arun')
   })
   it('the detail shows your share and each friend with an Open entry button', async () => {
     const user = userEvent.setup()
     withFriends()
     ui()
-    await user.click(screen.getByRole('button', { name: 'Dinner, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Dinner.*open details/ }))
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent('₹30,000 was for someone else · your share ₹0')
     const friends = within(dialog).getByRole('region', { name: 'Paid for others' })
@@ -252,7 +252,7 @@ describe('purchases paid for others', () => {
     withFriends()
     m.delPurchase.mockResolvedValue({ txn: { id: 'p1' }, others: [{ person_id: 'a', amount_paise: 3_000_000 }] })
     ui()
-    await user.click(screen.getByRole('button', { name: 'Dinner, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Dinner.*open details/ }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(m.delPurchase).toHaveBeenCalledWith('p1'))
     expect(m.del).not.toHaveBeenCalled()
@@ -265,7 +265,7 @@ describe('purchases paid for others', () => {
     withFriends()
     m.delPurchase.mockRejectedValueOnce(new Error('Arun has already paid ₹10000. Delete those payments first.'))
     ui()
-    await user.click(screen.getByRole('button', { name: 'Dinner, open details' }))
+    await user.click(screen.getByRole('button', { name: /^Dinner.*open details/ }))
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText("Couldn't delete: Arun has already paid ₹10000. Delete those payments first.")).toBeInTheDocument()
     expect(m.restorePurchase).not.toHaveBeenCalled()

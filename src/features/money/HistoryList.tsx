@@ -19,7 +19,7 @@ export function HistoryList({ today, onOpen }: { today: string; onOpen: (id: str
       <ul className="mx-4 divide-y divide-line overflow-hidden rounded-2xl bg-surface">
         {rows.map((r) => (
           <li key={r.id}>
-            <button onClick={() => onOpen(r.id)} aria-label={`${r.title}, ${r.person_name ?? 'no person'}, settled, open details`} className="block min-h-16 w-full px-4 py-3 text-left">
+            <button onClick={() => onOpen(r.id)} className="block min-h-16 w-full px-4 py-3 text-left">
               <span className="flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate font-medium">{r.title}</span>
                 <Amount paise={r.total_paise} tone={r.direction === 'receive' ? 'in' : 'out'} className="shrink-0 font-semibold" />

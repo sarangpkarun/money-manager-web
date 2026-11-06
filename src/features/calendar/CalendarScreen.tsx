@@ -170,18 +170,19 @@ export default function CalendarScreen() {
               {grid.map((week, wi) => (
                 <div key={wi} role="row" className="grid grid-cols-7">
                   {week.map((d) => {
-                    if (!d.inMonth) return <div key={d.date} role="gridcell" aria-hidden className="h-14 p-1 text-center text-sm text-muted/40">{d.day}</div>
+                    if (!d.inMonth) return <div key={d.date} role="gridcell" aria-hidden className="h-14" />
                     const list = markers.get(d.date)
                     const s = spend.get(d.date)
                     const isToday = d.date === today
                     const label = [shortDate(d.date), isToday ? 'today' : '', markerSummary(list), layers.spending && s && s.spent > 0 ? `spent ${formatMoney(s.spent)}` : ''].filter(Boolean).join(', ')
                     return (
                       <div key={d.date} role="gridcell">
-                        <button onClick={() => setSelected(d.date)} aria-label={label}
+                        <button onClick={() => setSelected(d.date)}
                                 className={`flex h-14 w-full flex-col items-center justify-start gap-0.5 rounded-xl p-1 text-sm ${selected === d.date ? 'bg-accent/15' : ''} ${isToday ? 'ring-2 ring-accent' : ''}`}>
-                          <span className="tabular leading-5">{d.day}</span>
+                          <span className="sr-only">{label}</span>
+                          <span aria-hidden className="tabular leading-5">{d.day}</span>
                           <span className="flex h-3 items-center gap-0.5">{visibleMarkers(list).map((m) => <Glyph key={m.kind} m={m} />)}</span>
-                          {layers.spending && s && s.spent > 0 && <span className="tabular text-[10px] leading-none text-muted">{formatCompact(s.spent)}</span>}
+                          {layers.spending && s && s.spent > 0 && <span aria-hidden className="tabular text-[10px] leading-none text-muted">{formatCompact(s.spent)}</span>}
                         </button>
                       </div>
                     )

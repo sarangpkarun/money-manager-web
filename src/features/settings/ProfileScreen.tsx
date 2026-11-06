@@ -66,16 +66,14 @@ export default function ProfileScreen() {
           <p className="text-sm text-muted">It decides what “today” is, when payments are due and when reminders arrive. Now: <span className="text-fg">{shownTz}</span></p>
           {device && device !== shownTz && <Chip onClick={() => setTz(device)}>Use this device: {device}</Chip>}
           <input type="search" aria-label="Search time zones" placeholder="Search, e.g. Kolkata or New York" className={inputCls} value={query} onChange={(e) => setQuery(e.target.value)} />
-          <ul role="listbox" aria-label="Time zones" className="max-h-48 overflow-y-auto rounded-xl bg-surface-2">
-            {matches.length === 0 && <li className="px-3 py-3 text-muted">No match</li>}
+          <div role="listbox" aria-label="Time zones" className="max-h-48 overflow-y-auto rounded-xl bg-surface-2">
+            {matches.length === 0 && <p className="px-3 py-3 text-muted">No match</p>}
             {matches.map((z) => (
-              <li key={z}>
-                <button role="option" aria-selected={z === shownTz} onClick={() => setTz(z)} className={`flex min-h-11 w-full items-center justify-between px-3 text-left ${z === shownTz ? 'font-semibold text-accent' : ''}`}>
-                  {z}{z === shownTz ? <span aria-hidden>✓</span> : null}
-                </button>
-              </li>
+              <button key={z} role="option" aria-selected={z === shownTz} onClick={() => setTz(z)} className={`flex min-h-11 w-full items-center justify-between px-3 text-left ${z === shownTz ? 'font-semibold text-accent' : ''}`}>
+                {z}{z === shownTz ? <span aria-hidden>✓</span> : null}
+              </button>
             ))}
-          </ul>
+          </div>
         </section>
 
         {error && <p role="alert" className="text-sm text-money-red">{error}</p>}
