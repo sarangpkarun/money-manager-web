@@ -17,5 +17,7 @@ export function useOnline(): boolean {
 /** Text for "Couldn't save: …": when there is no connection that is the reason, not the browser's "Failed to fetch". */
 export function explain(e: unknown): string {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return "you're offline"
-  return e instanceof Error && e.message ? e.message : 'something went wrong'
+  // Supabase errors are plain objects with a message, not Error instances
+  const m = typeof e === 'object' && e !== null && 'message' in e ? (e as { message: unknown }).message : undefined
+  return typeof m === 'string' && m ? m : 'something went wrong'
 }

@@ -29,6 +29,12 @@ test('scenario E: + → 120 → Food → Save (3 taps) appears in Activity', asy
   await expect(row).toContainText('−₹120')
   await expect(page.getByText('Today')).toBeVisible()
   await expect(page.getByLabel('Totals')).toContainText('₹120')
+
+  // and straight away on Home and in today's Calendar cell
+  await page.getByRole('link', { name: 'Home' }).click()
+  await expect(page.getByRole('region', { name: 'This month' }).getByLabel('Spent ₹120')).toBeVisible()
+  await page.getByRole('link', { name: 'Calendar' }).click()
+  await expect(page.getByRole('button', { name: /today.*spent ₹120/ })).toBeVisible()
 })
 
 test('Undo removes the transaction again', async ({ page }) => {

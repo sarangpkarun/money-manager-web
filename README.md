@@ -35,6 +35,13 @@ Rules (due tomorrow / today / overdue, quiet hours, manual note reminders, summa
 
 Home's Insights card shows up to five rule-based lines. `insight_facts(p_today)` (SQL) only aggregates; the rules, wording and thresholds are in `src/features/insights/rules.ts` (constants in `T`). Tapping a line opens the filtered Activity list or the entry it is about.
 
+## Quality checks (Phase 8)
+
+- `pnpm check:contrast` fails if any text/background pair in `src/app/theme.css` is under 4.5:1 in light or dark.
+- `e2e/a11y.spec.ts` runs axe on every main screen in both themes; `tests/unit/animation.test.ts` keeps animations to transform, opacity and colour.
+- `pnpm build`, then `node scripts/lighthouse.mjs` (local Supabase running) measures the signed-in Home with Lighthouse's mobile profile and prints the scores; the full report goes to `lighthouse-report/`.
+- Acceptance scenarios from the spec: A `e2e/others.spec.ts` (scenario A), B `e2e/plans.spec.ts` and `e2e/calendar.spec.ts` (scenario B), C `e2e/plans.spec.ts` (scenario C), D `e2e/plans.spec.ts` and `e2e/calendar.spec.ts` (scenario D), E `e2e/quick-add.spec.ts` (scenario E).
+
 ## Deploy
 Vercel (SPA rewrites in `vercel.json`) + a Supabase project: `supabase link --project-ref <ref> && supabase db push`.
 Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; configure auth Site URL / redirect URLs and a custom SMTP provider.

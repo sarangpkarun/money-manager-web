@@ -67,5 +67,7 @@ describe('explain', () => {
     expect(explain(new Error('permission denied'))).toBe('permission denied')
     expect(explain(new Error(''))).toBe('something went wrong')
     expect(explain('x')).toBe('something went wrong')
+    expect(explain({ message: 'Arun has already paid ₹250' })).toBe('Arun has already paid ₹250') // Supabase errors are plain objects
+    expect(explain(null)).toBe('something went wrong')
   })
 })

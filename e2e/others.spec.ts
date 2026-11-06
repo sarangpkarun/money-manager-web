@@ -66,6 +66,7 @@ test('scenario A: ₹30,000 on the card for Arun: spend ₹0, card +₹30,000, �
   await pay.getByRole('group', { name: 'Received into' }).getByRole('button', { name: 'UPI' }).click()
   await pay.getByRole('button', { name: 'Receive', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Progress' })).toContainText('Partial')
+  await expect(page.getByRole('region', { name: 'Progress' })).toContainText('₹20,000') // what is left
   expect(await bal('UPI')).toBe(1_000_000)
   expect(await bal('HDFC Card', 'outstanding_paise')).toBe(3_000_000) // the bill is settled separately
 
@@ -122,20 +123,21 @@ test('deleting the purchase is blocked once a friend has paid, then works (with 
 
   // delete from Activity: blocked with an explanation, nothing changes
   await page.getByRole('link', { name: 'Activity' }).click()
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible()
   const purchase = page.getByRole('button', { name: /^Lunch.*open details/ }).filter({ hasText: '₹1,000' }) // the ₹250 repayment has the same title
-  await purchase.click()
+  await tap(purchase)
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByRole('status').filter({ hasText: /Arun has already paid ₹250\. Delete those payments first\./ })).toBeVisible()
   await expect(purchase).toBeVisible()
 
   // remove the payment from the entry, then delete the purchase
-  await purchase.click()
+  await tap(purchase)
   await page.getByRole('dialog').getByRole('button', { name: 'Open entry for Arun' }).click()
   await tap(page.getByRole('button', { name: /^Delete payment of/ }))
   await expect(page.getByRole('region', { name: 'Progress' })).toContainText('Pending')
   await page.getByRole('link', { name: '‹ Money' }).click()
   await page.getByRole('link', { name: 'Activity' }).click()
-  await purchase.click()
+  await tap(purchase)
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
   await expect(purchase).toHaveCount(0)
   expect(Number((await sql(`select count(*)::int n from entries where user_id = $1`, [user.id])).rows[0].n)).toBe(0)

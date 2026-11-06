@@ -520,5 +520,23 @@ Trigger: push reminders unreliable on iOS. Work: wrap build with Capacitor, loca
 
 **Not done / needs you:**
 - [ ] `supabase db push` for `20260110000001_insights.sql` (cloud, only after you approve).
-- [ ] Stage 8B (polish: contrast and dark mode, accessibility, animation, empty/error/offline states, performance and Lighthouse, scenarios A to E).
+- [x] Stage 8B (polish): see below.
+
+## Phase 8B status (updated 2026-11-06): polish pass
+
+**Built and verified locally:**
+- **Contrast:** `pnpm check:contrast` (also in CI) checks every text/background pair of `theme.css` in both themes (including the tinted badges); it failed on dark-theme button text (white on the light accent and red fills was 2.5 to 2.8) and four light-theme text colours, all fixed through tokens (`--on-accent`, `--toast-action`, slightly deeper `accent`, `green`, `amber`, `grey`). Everything is now at least 4.5:1.
+- **Accessibility:** axe (`e2e/a11y.spec.ts`) over Home, Activity, Money, Calendar, an entry, the detail and Quick Add sheets and all ten Settings screens, in light and dark, plus sign-in: no violations. Fixed on the way: names that did not contain the visible text (transaction, loan, account and where-it-went rows, calendar days: they now take their name from what is shown, so a screen reader also hears the amounts), the time zone list is a real listbox, privacy links are underlined, calendar padding cells are blank instead of faint numbers.
+- **Animation:** `tests/unit/animation.test.ts` fails on any transition or animation that is not transform, opacity or colour; reduced motion is checked in Playwright.
+- **Offline, error states:** an offline banner, one `ErrorState` (Retry, says "You're offline" when that is the cause) replacing eight ad-hoc copies, and writes now fail at once offline with "Couldn't save: you're offline" instead of waiting silently (a paused save would be lost if the app was closed). The empty-state audit found every list and sheet already has one.
+- **Performance** (`node scripts/lighthouse.mjs`, signed in, production build, Lighthouse 13 mobile profile on this machine): Performance 100, Accessibility 100, Best practices 100, SEO 100 (a meta description and a valid `robots.txt` were the two misses); LCP about 1.0 s, TBT 10 ms, CLS 0. Installability checks: service worker active, manifest with 192/512 icons, standalone, apple-touch-icon, theme colour. The heavy RPCs on the 5,000-transaction account: `dashboard_summary` 29 ms, `insight_facts` 6 ms, `calendar_month` 8 ms. Initial JS 191.7 KB gz (budget 200). No `<img>` is used, so there was nothing to lazy-load.
+- **Scenarios A to E** all pass as Playwright tests (see the README index); E now also checks Home and today's Calendar cell, A checks what is left after the part payment.
+
+**Numbers:** 808 unit/component tests, 236 SQL/RLS tests, 44 Playwright tests (incl. axe in both themes, offline, reduced motion), coverage 99.2% lines on `src/lib`.
+
+**Deviation from the spec, decided not to change in 8B:** scenario A step 3 says the Calendar shows Arun's payment on its date. The Calendar is built from plan rows with a due date, and a purchase paid for a friend has none, so those payments are not shown there (the purchase itself is). Showing every payment on its day is a small v1.1 item (a payments layer in `calendar_month`).
+
+**Test flakiness found:** list rows draw a first frame before layout, so a click aimed at that first element could miss after a tab switch (it hit a few tests as 1-minute timeouts). e2e now waits for the screen and for the row to be in the viewport (`tap` in `e2e/helpers.ts`).
+
+**Not done / needs you (iPhone and accounts):** dark-mode readability on the phone, a VoiceOver spot check, airplane-mode launch, the reminder tests from 7A and the viewport gap from Phase 0; pushing everything to GitHub and Vercel.
 
