@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Amount } from '@/ui/Amount'
 import { EmptyState } from '@/ui/EmptyState'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { secondaryBtn } from '@/ui/Field'
 import { dayLabel } from '@/features/activity/group'
@@ -12,7 +13,7 @@ export function HistoryList({ today, onOpen }: { today: string; onOpen: (id: str
   const q = useMoneyHistory()
   const rows = useMemo(() => q.data?.pages.flat() ?? [], [q.data])
   if (q.isPending) return <div className="space-y-3 px-4"><Skeleton className="h-20" /><Skeleton className="h-20" /></div>
-  if (q.isError) return <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">Couldn't load history. <button className="text-accent" onClick={() => void q.refetch()}>Retry</button></div>
+  if (q.isError) return <ErrorState what="history" onRetry={() => void q.refetch()} />
   if (rows.length === 0) return <EmptyState title="Nothing settled yet" hint="Loans that are fully paid move here." />
   return (
     <div className="space-y-3">

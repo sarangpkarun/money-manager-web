@@ -3,6 +3,7 @@ import { Amount } from '@/ui/Amount'
 import { Chip } from '@/ui/Chip'
 import { EmptyState } from '@/ui/EmptyState'
 import { inputCls, secondaryBtn } from '@/ui/Field'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { ImportSheet } from './ImportSheet'
 import { MergeSheet } from './MergeSheet'
@@ -54,7 +55,7 @@ export default function PeopleList({ today, onOpenEntry }: { today: string; onOp
       )}
 
       {q.isPending ? <div className="space-y-2 px-4"><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
-        : q.isError ? <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">Couldn't load people. <button className="text-accent" onClick={() => void q.refetch()}>Retry</button></div>
+        : q.isError ? <ErrorState what="people" onRetry={() => void q.refetch()} />
         : rows.length === 0 ? (
           <EmptyState title={all.length === 0 ? 'No people yet' : 'No one matches'} hint={all.length === 0 ? 'Add the people you lend to or borrow from.' : 'Try another filter or search.'} />
         ) : (

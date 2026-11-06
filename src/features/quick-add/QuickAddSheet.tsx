@@ -1,3 +1,4 @@
+import { explain } from '@/lib/online'
 import { useMemo, useRef, useState } from 'react'
 import { useAccounts } from '@/features/accounts/queries'
 import { useAddTransaction, useDeleteTransaction, useRecentTransactions, useTitleSuggestions, useUpdateTransaction, type TitleSuggestion } from '@/features/activity/queries'
@@ -156,7 +157,7 @@ function QuickAddForm() {
           { label: 'Add another', run: () => openQuickAdd({ kind: i.kind, accountId: i.account_id, date: i.start_date }) },
         ],
       })
-      saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${e.message}`, duration: 8000 }))
+      saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${explain(e)}`, duration: 8000 }))
     } catch (e) {
       setErrors({ person: (e as Error).message })
     }
@@ -181,7 +182,7 @@ function QuickAddForm() {
           others: editOthersPayload(v.items, ids),
         }, {
           onSuccess: () => toast().show({ message: `Updated ${label}` }),
-          onError: (e) => toast().show({ message: `Couldn't update: ${(e as Error).message}`, duration: 8000 }),
+          onError: (e) => toast().show({ message: `Couldn't update: ${explain(e)}`, duration: 8000 }),
         })
         return
       }
@@ -198,7 +199,7 @@ function QuickAddForm() {
           { label: 'Add another', run: () => openQuickAdd({ kind: 'expense', accountId: input.account_id, date: input.date }) },
         ],
       })
-      saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${e.message}`, duration: 8000 }))
+      saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${explain(e)}`, duration: 8000 }))
     } catch (e) {
       setOtherErrors({ form: (e as Error).message })
     }
@@ -217,7 +218,7 @@ function QuickAddForm() {
       setQuickAddOpen(false)
       update.mutate({ id: editing.id, patch: { ...r.input } }, {
         onSuccess: () => toast().show({ message: `Updated ${label}` }),
-        onError: (e) => toast().show({ message: `Couldn't update: ${(e as Error).message}` }),
+        onError: (e) => toast().show({ message: `Couldn't update: ${explain(e)}` }),
       })
       return
     }
@@ -233,7 +234,7 @@ function QuickAddForm() {
         { label: 'Add another', run: () => openQuickAdd({ kind: r.input.kind, accountId: r.input.account_id, date: r.input.date }) },
       ],
     })
-    saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${e.message}`, duration: 8000 }))
+    saved.catch((e: Error) => toast().show({ message: `Couldn't save: ${explain(e)}`, duration: 8000 }))
   }
 
   return (

@@ -1,3 +1,4 @@
+import { explain } from '@/lib/online'
 import { useToasts, showUndo } from '@/ui/toastStore'
 import { rowLabel } from '@/lib/labels'
 import { describeRepeat, occurrencesBetween } from '@/lib/repeat'
@@ -46,7 +47,7 @@ export function DaySheet({ date, data, today, onClose, onPay, onOpenEntry, onOpe
       const r = await tick.mutateAsync({ id: n.id, date: n.date, repeat_rule: n.repeat_rule, done: n.done, remind_at: n.remind_at ?? null, ...(timezone ? { timezone } : {}) })
       showUndo(r.movedTo ? `"${n.title}" done · next ${shortDate(r.movedTo)}` : n.done ? `"${n.title}" reopened` : `"${n.title}" done`, () => undoTick.mutate(r.undo))
     } catch (e) {
-      useToasts.getState().show({ message: `Couldn't update: ${(e as Error).message}` })
+      useToasts.getState().show({ message: `Couldn't update: ${explain(e)}` })
     }
   }
 

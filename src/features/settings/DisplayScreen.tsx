@@ -1,3 +1,4 @@
+import { explain } from '@/lib/online'
 import { useState } from 'react'
 import { EDITABLE_CARDS, isDefaultItems, itemsToLayout, layoutToItems, moveItem, toggleHidden, type LayoutItem } from '@/features/home/layoutEdit'
 import { useProfile, useUpdateProfile } from '@/features/profile/useProfile'
@@ -28,7 +29,7 @@ function LayoutEditor({ layout }: { layout: unknown }) {
       setSaved(JSON.stringify(itemsToLayout(next)))
       useToasts.getState().show({ message: 'Home layout saved' })
     } catch (e) {
-      useToasts.getState().show({ message: `Couldn't save: ${(e as Error).message}` })
+      useToasts.getState().show({ message: `Couldn't save: ${explain(e)}` })
     }
   }
   return (
@@ -72,7 +73,7 @@ export default function DisplayScreen() {
       await save.mutateAsync(patch)
     } catch (e) {
       setDisplay(before); setNumberFmt(before.number); setDateFmt(before.date)
-      useToasts.getState().show({ message: `Couldn't save: ${(e as Error).message}` })
+      useToasts.getState().show({ message: `Couldn't save: ${explain(e)}` })
     }
   }
 

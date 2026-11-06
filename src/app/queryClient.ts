@@ -5,7 +5,12 @@ import { del, get, set } from 'idb-keyval'
 const DAY = 1000 * 60 * 60 * 24
 
 export const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, gcTime: 7 * DAY, retry: 1, refetchOnWindowFocus: true } },
+  defaultOptions: {
+    queries: { staleTime: 30_000, gcTime: 7 * DAY, retry: 1, refetchOnWindowFocus: true },
+    // Offline writes must fail right away (and say so) instead of waiting silently for a connection that may never come
+    // while the app is open: a paused save is lost if the app is closed. An offline write queue is a v1.1 item.
+    mutations: { networkMode: 'always' },
+  },
 })
 
 export const persister = createAsyncStoragePersister({

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, matchPath, Navigate, useLocation } from 'react-router-dom'
+import { OfflineBanner } from '@/ui/OfflineBanner'
 import { Toaster } from '@/ui/Toaster'
 import { useAccounts } from '@/features/accounts/queries'
 import { useRecentTransactions } from '@/features/activity/queries'
@@ -164,6 +165,7 @@ export function Shell() {
       <Suspense fallback={null}>{emiOpen && <EmiSheet open onClose={() => setEmiOpen(false)} />}</Suspense>
       <DisplaySync />
       <Prefetch />
+      <OfflineBanner />
       <Toaster />
     </div>
   )

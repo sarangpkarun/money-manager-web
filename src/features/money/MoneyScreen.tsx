@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useToday } from '@/features/profile/useToday'
 import { useUi } from '@/lib/uiStore'
 import { Amount } from '@/ui/Amount'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { HistoryList } from './HistoryList'
 import { OwedList } from './OwedList'
@@ -49,10 +50,7 @@ export default function MoneyScreen() {
       {view === 'history' ? <HistoryList today={today} onOpen={open} />
         : view === 'people' ? <Suspense fallback={<div className="px-4"><Skeleton className="h-40" /></div>}><PeopleList today={today} onOpenEntry={open} /></Suspense>
         : q.isError && !q.data ? (
-          <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">
-            <p className="mb-3">Couldn't load your money.</p>
-            <button onClick={() => void q.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Retry</button>
-          </div>
+          <ErrorState what="your money" onRetry={() => void q.refetch()} />
         ) : !q.data ? <div className="space-y-3 px-4" aria-busy="true" aria-label="Loading money"><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
         : <OwedList direction={view === 'owed' ? 'receive' : 'pay'} entries={q.data.entries} today={today} onOpen={open}
                     onAdd={() => openQuickAdd({ kind: view === 'owed' ? 'lent' : 'borrowed' })} />}

@@ -9,6 +9,7 @@ import { useProfile } from '@/features/profile/useProfile'
 import { useToday } from '@/features/profile/useToday'
 import { useUi } from '@/lib/uiStore'
 import { EmptyState } from '@/ui/EmptyState'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { CardsCard, DueSoonCard, EmiLoadCard, NetPositionCard, PeopleCard, RecentCard, ThisMonthCard, WhereItWentCard, type Drill } from './cards'
 import type { DueSoonItem } from './dashboardTypes'
@@ -88,10 +89,7 @@ export default function HomeScreen() {
       </div>
 
       {dash.isError && !d ? (
-        <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">
-          <p className="mb-3">Couldn't load your dashboard.</p>
-          <button onClick={() => void dash.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Retry</button>
-        </div>
+        <ErrorState what="your dashboard" onRetry={() => void dash.refetch()} />
       ) : !d ? (
         <div className="space-y-4 px-4" aria-busy="true" aria-label="Loading dashboard">
           <Skeleton className="h-72" /><Skeleton className="h-80" /><Skeleton className="h-40" />

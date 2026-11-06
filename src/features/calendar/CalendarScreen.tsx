@@ -13,6 +13,7 @@ import { ALL_LAYERS, markerSummary, markersByDay, visibleMarkers, type Layers, t
 import { useUi } from '@/lib/uiStore'
 import { Amount } from '@/ui/Amount'
 import { Chip } from '@/ui/Chip'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { DaySheet } from './DaySheet'
 import { shortDate } from './dateText'
@@ -158,10 +159,7 @@ export default function CalendarScreen() {
           </section>
 
           {q.isError && !data ? (
-            <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">
-              <p className="mb-3">Couldn't load the calendar.</p>
-              <button onClick={() => void q.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Retry</button>
-            </div>
+            <ErrorState what="the calendar" onRetry={() => void q.refetch()} />
           ) : !data ? <div className="px-4" aria-busy="true" aria-label="Loading calendar"><Skeleton className="h-80" /></div> : (
             <div className="px-2" role="grid" aria-label={monthLabel(month)}>
               <div role="row" className="grid grid-cols-7 pb-1 text-center text-xs text-muted">

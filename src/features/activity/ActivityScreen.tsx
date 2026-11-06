@@ -1,3 +1,4 @@
+import { explain } from '@/lib/online'
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -11,6 +12,7 @@ import { Amount } from '@/ui/Amount'
 import { Chip } from '@/ui/Chip'
 import { EmptyState } from '@/ui/EmptyState'
 import { inputCls } from '@/ui/Field'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { SwipeRow } from '@/ui/SwipeRow'
 import { showUndo, useToasts } from '@/ui/toastStore'
@@ -43,7 +45,7 @@ function useDeleteWithUndo() {
       const full = await del.mutateAsync(row.id)
       showUndo(`Deleted ${formatMoney(row.amount_paise)} · ${rowTitle(row)}`, () => restore.mutate(full))
     } catch (e) {
-      useToasts.getState().show({ message: `Couldn't delete: ${(e as Error).message}`, duration: 8000 })
+      useToasts.getState().show({ message: `Couldn't delete: ${explain(e)}`, duration: 8000 })
     }
   }, [del, restore, delPurchase, restorePurchase])
 }
@@ -158,8 +160,7 @@ export default function ActivityScreen() {
         {list.isPending ? (
           <div className="space-y-2 px-4 pt-2" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
         ) : list.isError ? (
-          <EmptyState title="Couldn't load activity" hint={(list.error as Error).message}
-                      action={<button onClick={() => void list.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Try again</button>} />
+          <ErrorState what="activity" className="mx-4 mt-4" onRetry={() => void list.refetch()} />
         ) : rows.length === 0 ? (
           filtered
             ? <EmptyState title="No matches" hint="Nothing fits these filters." action={<button onClick={() => setFilters({})} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Clear filters</button>} />

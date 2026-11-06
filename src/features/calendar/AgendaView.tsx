@@ -3,6 +3,7 @@ import { rowLabel } from '@/lib/labels'
 import { describeRepeat } from '@/lib/repeat'
 import type { ScheduleRow } from '@/lib/schedule'
 import { Amount } from '@/ui/Amount'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { dayLabel } from '@/features/activity/group'
 import { TONE_CLS } from '@/features/money/status'
@@ -65,7 +66,7 @@ export function AgendaView({ today, onOpenEntry, onOpenNote, onOpenDay }: {
 
   if (q.isPending) return <div className="space-y-3 px-4" aria-busy="true" aria-label="Loading agenda"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
   if (q.isError && !pages) {
-    return <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">Couldn't load the agenda. <button className="text-accent" onClick={() => void q.refetch()}>Retry</button></div>
+    return <ErrorState what="the agenda" onRetry={() => void q.refetch()} />
   }
 
   return (

@@ -10,6 +10,7 @@ import type { ScheduleRow } from '@/lib/schedule'
 import { Amount } from '@/ui/Amount'
 import { ConfirmSheet } from '@/ui/ConfirmSheet'
 import { primaryBtn, secondaryBtn } from '@/ui/Field'
+import { ErrorState } from '@/ui/ErrorState'
 import { Skeleton } from '@/ui/Skeleton'
 import { showUndo } from '@/ui/toastStore'
 import { dayLabel } from '@/features/activity/group'
@@ -83,7 +84,7 @@ export default function EntryScreen({ id }: { id: string }) {
 
   let body
   if (q.isPending) body = <div className="space-y-3 p-4"><Skeleton className="h-40" /><Skeleton className="h-32" /></div>
-  else if (q.isError) body = <div role="alert" className="m-4 rounded-2xl bg-surface p-4 text-center">Couldn't load this entry. <button className="text-accent" onClick={() => void q.refetch()}>Retry</button></div>
+  else if (q.isError) body = <ErrorState what="this entry" className="m-4" onRetry={() => void q.refetch()} />
   else if (!e) body = <div className="m-4 rounded-2xl bg-surface p-4 text-center">This entry no longer exists.</div>
   else {
     const multi = rows.length > 1
