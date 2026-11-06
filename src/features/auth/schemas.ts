@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+// zod's fast path compiles validators with new Function(), which a strict Content-Security-Policy (no 'unsafe-eval') blocks.
+// Forms are tiny, so the plain interpreter costs nothing.
+z.config({ jitless: true })
+
 const email = z.string().trim().toLowerCase().pipe(z.email('Enter a valid email'))
 const password = z.string().min(8, 'At least 8 characters')
 

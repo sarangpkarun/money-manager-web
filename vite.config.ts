@@ -1,10 +1,12 @@
 import { fileURLToPath, URL } from 'node:url'
+import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { securityHeaders } from './scripts/securityHeaders.mjs'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
@@ -38,6 +40,8 @@ export default defineConfig({
       },
     }),
   ],
+  // `vite preview` serves the production build with the same security headers Vercel sends
+  preview: { headers: securityHeaders(loadEnv(mode, process.cwd(), '').VITE_SUPABASE_URL || 'http://127.0.0.1:54321') },
   test: {
     environment: 'jsdom',
     globals: true,
@@ -50,4 +54,4 @@ export default defineConfig({
       thresholds: { lines: 95, functions: 95, statements: 95, branches: 90 },
     },
   },
-})
+}))

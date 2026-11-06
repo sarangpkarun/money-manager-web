@@ -20,6 +20,7 @@
     "dev:cloud": "vite --mode cloud",
     "test:cov": "vitest run --coverage",
     "e2e": "playwright test",
+    "e2e:prod": "playwright test --config playwright.prod.config.ts",
     "seed:perf": "node scripts/seed-transactions.mjs"
   },
   "dependencies": {
