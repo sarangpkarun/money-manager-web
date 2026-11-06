@@ -238,7 +238,7 @@ function QuickAddForm() {
   }
 
   return (
-    <div className="space-y-4" data-testid="quick-add">
+    <div className="compact-on-keyboard space-y-4" data-testid="quick-add">
       {editing ? <h2 className="text-lg font-semibold">Edit transaction</h2> : (
         <div role="radiogroup" aria-label="Type" className="grid grid-cols-5 gap-1 rounded-xl bg-surface-2 p-1">
           {KINDS.map((k) => (
@@ -252,7 +252,7 @@ function QuickAddForm() {
       )}
 
       {!editing && (
-        <div className="flex justify-center">
+        <div className="flex justify-center" data-hide-on-keyboard>
           <Chip onClick={() => { setQuickAddOpen(false); setEmiOpen(true) }}>🛍 EMI / instalments</Chip>
         </div>
       )}
@@ -391,7 +391,9 @@ function QuickAddForm() {
       {more.notes && <Field label="Note"><input className={inputCls} value={form.notes} onChange={(e) => set('notes', e.target.value)} autoComplete="off" /></Field>}
       {!lending && more.tags && <Field label="Tags" hint="Separate with spaces or commas"><input className={inputCls} value={form.tags} onChange={(e) => set('tags', e.target.value)} autoComplete="off" /></Field>}
 
-      <button type="button" className={primaryBtn} onClick={() => void submit()}>{editing ? 'Save changes' : 'Save'}</button>
+      <div className="sheet-footer">
+        <button type="button" className={primaryBtn} onClick={() => void submit()}>{editing ? 'Save changes' : 'Save'}</button>
+      </div>
     </div>
   )
 }

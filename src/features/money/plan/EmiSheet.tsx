@@ -101,7 +101,9 @@ export default function EmiSheet({ open, onClose }: { open: boolean; onClose: ()
           {errors.account && <p role="alert" className="text-sm text-money-red">{errors.account}</p>}
         </div>
         <div><Chip selected={remind} onClick={() => setRemind(!remind)}>{remind ? '🔔 Reminders on' : '🔕 Reminders off'}</Chip></div>
-        <button className={primaryBtn} disabled={create.isPending} onClick={() => void submit()}>Save</button>
+        <div className="sheet-footer">
+          <button className={primaryBtn} disabled={create.isPending} onClick={() => void submit()}>Save</button>
+        </div>
       </div>
     </Sheet>
   )
