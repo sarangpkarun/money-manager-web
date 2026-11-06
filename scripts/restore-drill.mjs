@@ -50,6 +50,7 @@ async function seedDrillAccount() {
   const p = (await db.query(`insert into people (user_id, name) values ($1,'Drill Friend') returning id`, [uid])).rows[0].id
   const e = (await db.query(`insert into entries (user_id, kind, direction, person_id, title, principal_paise, start_date, total_payable_paise) values ($1,'lent','receive',$2,'Drill loan',500000,current_date,500000) returning id`, [uid, p])).rows[0].id
   await db.query(`insert into schedule_items (user_id, entry_id, seq, due_date, due_paise, paid_paise) values ($1,$2,1,current_date + 30,500000,100000)`, [uid, e])
+  await db.query(`insert into payments (user_id, entry_id, amount_paise, paid_on) values ($1,$2,100000,current_date)`, [uid, e])
   await db.query(`insert into notes (user_id, kind, title, date) values ($1,'task','Drill task',current_date)`, [uid])
   await db.end()
   return { email, password }
