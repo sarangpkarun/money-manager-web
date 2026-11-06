@@ -1,0 +1,24 @@
+name: Health check
+
+# Every 6 hours: is the app up, is the database answering, are the headers there? A failed run emails the repository owner.
+# The database ping doubles as the keep-alive that stops a free Supabase project from pausing for inactivity.
+# Set these in Settings > Secrets and variables > Actions > Variables: APP_URL, SUPABASE_URL, SUPABASE_ANON_KEY (the anon key is public).
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc }
+      - name: Check the deployed app and Supabase
+        run: node scripts/healthcheck.mjs
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
