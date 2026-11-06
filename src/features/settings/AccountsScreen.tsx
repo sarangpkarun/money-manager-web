@@ -115,7 +115,7 @@ export default function AccountsScreen() {
   return (
     <div>
       <PageHeader title="Accounts" back="/settings" backLabel="Settings"
-        action={<button onClick={() => setEditing('new')} className="min-h-11 rounded-full bg-accent px-4 font-semibold text-white">Add</button>} />
+        action={<button onClick={() => setEditing('new')} className="min-h-11 rounded-full bg-accent px-4 font-semibold text-on-accent">Add</button>} />
       <div className="space-y-3 px-4 pb-8">
         {accounts.isPending ? <Skeleton className="h-24" />
           : active.length === 0 ? <EmptyState title="No accounts yet" hint="Add where your money lives: cash, bank, UPI or a card." />

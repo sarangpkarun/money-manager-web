@@ -99,7 +99,7 @@ export function WhereItWentCard({ d, drill }: { d: Dashboard; drill: Drill }) {
       <div role="group" aria-label="Group by" className="mb-3 flex gap-1 rounded-xl bg-surface-2 p-1">
         {BYS.map((o) => (
           <button key={o.v} aria-pressed={by === o.v} onClick={() => choose(o.v)}
-                  className={`min-h-9 flex-1 rounded-lg text-sm ${by === o.v ? 'bg-accent text-white' : 'text-fg'}`}>{o.label}</button>
+                  className={`min-h-9 flex-1 rounded-lg text-sm ${by === o.v ? 'bg-accent text-on-accent' : 'text-fg'}`}>{o.label}</button>
         ))}
       </div>
       {rows.length === 0 ? (
@@ -147,7 +147,7 @@ export function CardsCard({ d, drill, today }: { d: Dashboard; drill: Drill; tod
   return (
     <Card title="Credit cards">
       {friends && friends.pending_paise > 0 && (
-        <p className="mb-3 rounded-xl bg-money-amber/15 px-3 py-2 text-sm text-money-amber">{formatMoney(friends.pending_paise)} to get back from friends</p>
+        <p className="mb-3 rounded-xl bg-money-amber/10 px-3 py-2 text-sm text-money-amber">{formatMoney(friends.pending_paise)} to get back from friends</p>
       )}
       <ul className="space-y-3">
         {cards.map((c) => {
@@ -269,7 +269,7 @@ export function DueSoonCard({ d, today, onPay, onOpen }: { d: Dashboard; today: 
               </button>
               <Amount paise={i.remaining_paise} tone={receiving ? 'in' : 'out'} className="shrink-0 font-semibold" />
               <button onClick={() => onPay(i)} aria-label={`${receiving ? 'Receive' : 'Pay'} ${i.title}`}
-                      className="min-h-11 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white">{receiving ? 'Receive' : 'Pay'}</button>
+                      className="min-h-11 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-on-accent">{receiving ? 'Receive' : 'Pay'}</button>
             </li>
           )
         })}

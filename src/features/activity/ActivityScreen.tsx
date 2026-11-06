@@ -125,9 +125,9 @@ export default function ActivityScreen() {
           <input type="search" aria-label="Search transactions" placeholder="Search title, place, notes, tags…" value={text}
                  onChange={(e) => setText(e.target.value)} className={inputCls} />
           <button onClick={() => setFilterOpen(true)} aria-label={filterCount ? `Filters, ${filterCount} active` : 'Filters'}
-                  className={`relative h-12 w-12 shrink-0 rounded-xl border ${filterCount ? 'border-accent bg-accent text-white' : 'border-line bg-surface-2'}`}>
+                  className={`relative h-12 w-12 shrink-0 rounded-xl border ${filterCount ? 'border-accent bg-accent text-on-accent' : 'border-line bg-surface-2'}`}>
             <span aria-hidden>⚙︎</span>
-            {filterCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-money-red px-1 text-xs text-white">{filterCount}</span>}
+            {filterCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-money-red px-1 text-xs text-on-accent">{filterCount}</span>}
           </button>
         </div>
 
@@ -159,11 +159,11 @@ export default function ActivityScreen() {
           <div className="space-y-2 px-4 pt-2" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
         ) : list.isError ? (
           <EmptyState title="Couldn't load activity" hint={(list.error as Error).message}
-                      action={<button onClick={() => void list.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-white">Try again</button>} />
+                      action={<button onClick={() => void list.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Try again</button>} />
         ) : rows.length === 0 ? (
           filtered
-            ? <EmptyState title="No matches" hint="Nothing fits these filters." action={<button onClick={() => setFilters({})} className="min-h-11 rounded-full bg-accent px-5 text-white">Clear filters</button>} />
-            : <EmptyState title="Nothing here yet" hint={`No transactions in ${monthLabel(month)}.`} action={<button onClick={() => openQuickAdd()} className="min-h-11 rounded-full bg-accent px-5 text-white">Add your first expense</button>} />
+            ? <EmptyState title="No matches" hint="Nothing fits these filters." action={<button onClick={() => setFilters({})} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Clear filters</button>} />
+            : <EmptyState title="Nothing here yet" hint={`No transactions in ${monthLabel(month)}.`} action={<button onClick={() => openQuickAdd()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Add your first expense</button>} />
         ) : (
           <div style={{ height: virt.getTotalSize(), position: 'relative' }}>
             {vItems.map((v) => {

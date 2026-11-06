@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "check:bundle": "node scripts/check-bundle.mjs",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "icons": "node scripts/icons.mjs",
     "types": "supabase gen types typescript --local > src/lib/database.types.ts",
     "push:test": "node scripts/push-test.mjs",

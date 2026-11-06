@@ -12,7 +12,7 @@ export function Chip({ selected = false, className = '', children, ...rest }: Ch
       type="button"
       aria-pressed={selected}
       className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm transition-transform active:scale-95 ${
-        selected ? 'border-accent bg-accent text-white' : 'border-line bg-surface text-fg'
+        selected ? 'border-accent bg-accent text-on-accent' : 'border-line bg-surface text-fg'
       } ${className}`}
       {...rest}
     >

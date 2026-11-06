@@ -22,7 +22,7 @@ export function OwedList({ direction, entries, today, onOpen, onAdd }: {
   if (groups.length === 0) {
     return <EmptyState title={owed ? 'Nobody owes you' : 'You owe nobody'}
                        hint={owed ? 'Lend money to a friend and track it here.' : 'Borrowed money you still have to return shows up here.'}
-                       action={<button onClick={onAdd} className="min-h-11 rounded-full bg-accent px-5 text-white">{owed ? 'Lend money' : 'Add borrowed money'}</button>} />
+                       action={<button onClick={onAdd} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">{owed ? 'Lend money' : 'Add borrowed money'}</button>} />
   }
   return (
     <div className="space-y-3">

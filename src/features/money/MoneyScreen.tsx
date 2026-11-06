@@ -42,7 +42,7 @@ export default function MoneyScreen() {
       <div role="tablist" aria-label="Money views" className="mx-4 flex gap-1 rounded-xl bg-surface-2 p-1">
         {VIEWS.map((o) => (
           <button key={o.v} role="tab" aria-selected={view === o.v} onClick={() => setView(o.v)}
-                  className={`min-h-9 flex-1 rounded-lg px-1 text-sm ${view === o.v ? 'bg-accent text-white' : 'text-fg'}`}>{o.label}</button>
+                  className={`min-h-9 flex-1 rounded-lg px-1 text-sm ${view === o.v ? 'bg-accent text-on-accent' : 'text-fg'}`}>{o.label}</button>
         ))}
       </div>
 
@@ -51,7 +51,7 @@ export default function MoneyScreen() {
         : q.isError && !q.data ? (
           <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">
             <p className="mb-3">Couldn't load your money.</p>
-            <button onClick={() => void q.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-white">Retry</button>
+            <button onClick={() => void q.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Retry</button>
           </div>
         ) : !q.data ? <div className="space-y-3 px-4" aria-busy="true" aria-label="Loading money"><Skeleton className="h-32" /><Skeleton className="h-32" /></div>
         : <OwedList direction={view === 'owed' ? 'receive' : 'pay'} entries={q.data.entries} today={today} onOpen={open}

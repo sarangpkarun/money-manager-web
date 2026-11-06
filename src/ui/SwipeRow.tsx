@@ -47,7 +47,7 @@ export function SwipeRow({ children, onSwipeRight, onSwipeLeft, rightLabel = 'Ed
 
   return (
     <div className="relative overflow-hidden">
-      <div aria-hidden className="absolute inset-0 flex items-center justify-between px-4 text-sm font-semibold text-white">
+      <div aria-hidden className="absolute inset-0 flex items-center justify-between px-4 text-sm font-semibold text-on-accent">
         <span className={`rounded-lg bg-accent px-3 py-2 ${dx > 0 ? 'opacity-100' : 'opacity-0'}`}>{rightLabel}</span>
         <span className={`rounded-lg bg-money-red px-3 py-2 ${dx < 0 ? 'opacity-100' : 'opacity-0'}`}>{leftLabel}</span>
       </div>

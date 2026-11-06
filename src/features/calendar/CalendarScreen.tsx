@@ -113,9 +113,9 @@ export default function CalendarScreen() {
       <div className="flex items-center justify-between px-4 pt-6">
         <h1 className="text-3xl font-bold">Calendar</h1>
         <button onClick={() => setFilterOpen(true)} aria-label={filterCount ? `Filters, ${filterCount} active` : 'Filters'}
-                className={`relative h-11 w-11 rounded-xl border ${filterCount ? 'border-accent bg-accent text-white' : 'border-line bg-surface-2'}`}>
+                className={`relative h-11 w-11 rounded-xl border ${filterCount ? 'border-accent bg-accent text-on-accent' : 'border-line bg-surface-2'}`}>
           <span aria-hidden>⚙︎</span>
-          {filterCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-money-red px-1 text-xs text-white">{filterCount}</span>}
+          {filterCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-money-red px-1 text-xs text-on-accent">{filterCount}</span>}
         </button>
       </div>
 
@@ -127,7 +127,7 @@ export default function CalendarScreen() {
         </div>
         <div role="tablist" aria-label="Calendar view" className="flex gap-1 rounded-xl bg-surface-2 p-1">
           {(['month', 'agenda'] as const).map((v) => (
-            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`min-h-9 rounded-lg px-3 text-sm ${view === v ? 'bg-accent text-white' : 'text-fg'}`}>{v === 'month' ? 'Month' : 'Agenda'}</button>
+            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`min-h-9 rounded-lg px-3 text-sm ${view === v ? 'bg-accent text-on-accent' : 'text-fg'}`}>{v === 'month' ? 'Month' : 'Agenda'}</button>
           ))}
         </div>
       </div>
@@ -160,7 +160,7 @@ export default function CalendarScreen() {
           {q.isError && !data ? (
             <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">
               <p className="mb-3">Couldn't load the calendar.</p>
-              <button onClick={() => void q.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-white">Retry</button>
+              <button onClick={() => void q.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Retry</button>
             </div>
           ) : !data ? <div className="px-4" aria-busy="true" aria-label="Loading calendar"><Skeleton className="h-80" /></div> : (
             <div className="px-2" role="grid" aria-label={monthLabel(month)}>

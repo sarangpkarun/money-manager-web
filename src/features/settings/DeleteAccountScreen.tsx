@@ -50,7 +50,7 @@ export default function DeleteAccountScreen() {
         <Field label={`Type ${email} to confirm`}>
           <input className={inputCls} value={typed} onChange={(e) => setTyped(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email" />
         </Field>
-        <button className="min-h-12 w-full rounded-xl bg-money-red px-4 font-semibold text-white disabled:opacity-40" disabled={!emailMatches(typed, email) || busy} onClick={() => setConfirming(true)}>Delete my account</button>
+        <button className="min-h-12 w-full rounded-xl bg-money-red px-4 font-semibold text-on-accent disabled:opacity-40" disabled={!emailMatches(typed, email) || busy} onClick={() => setConfirming(true)}>Delete my account</button>
         {error && <p role="alert" className="text-money-red">{error}</p>}
       </div>
       {confirming && <ConfirmSheet title="Delete everything?" message="Your account and all its data will be erased permanently. There is no way to get it back." confirmLabel="Delete forever" busy={busy} onConfirm={() => void remove()} onClose={() => setConfirming(false)} />}

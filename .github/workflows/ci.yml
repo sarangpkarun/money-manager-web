@@ -12,6 +12,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
+      - run: pnpm check:contrast
       - run: pnpm test
 
       - uses: supabase/setup-cli@v1

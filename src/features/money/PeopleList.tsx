@@ -41,14 +41,14 @@ export default function PeopleList({ today, onOpenEntry }: { today: string; onOp
     <div className="space-y-3">
       <div className="flex gap-2 px-4">
         <input type="search" aria-label="Search people" placeholder="Search name or phone" value={text} onChange={(e) => setText(e.target.value)} className={inputCls} />
-        <button onClick={() => setSheet({ id: null })} className="h-12 shrink-0 rounded-xl bg-accent px-4 font-semibold text-white">Add</button>
+        <button onClick={() => setSheet({ id: null })} className="h-12 shrink-0 rounded-xl bg-accent px-4 font-semibold text-on-accent">Add</button>
       </div>
       <div className="-mx-0 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Filter people">
         {FILTERS.map((f) => <Chip key={f.v} selected={filter === f.v} onClick={() => setFilter(f.v)}>{f.label}</Chip>)}
       </div>
 
       {dups.length > 0 && (
-        <button onClick={() => setMerging(true)} className="mx-4 flex min-h-11 w-[calc(100%-2rem)] items-center justify-between rounded-xl bg-money-amber/15 px-4 text-left text-money-amber">
+        <button onClick={() => setMerging(true)} className="mx-4 flex min-h-11 w-[calc(100%-2rem)] items-center justify-between rounded-xl bg-money-amber/15 px-4 text-left text-fg">
           <span>{dups.length} possible duplicate{dups.length === 1 ? '' : 's'}</span><span className="font-medium">Review</span>
         </button>
       )}

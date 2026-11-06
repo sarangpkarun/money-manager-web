@@ -151,7 +151,7 @@ export function Shell() {
         <TabLink tab="home" active={tab === 'home'} />
         <TabLink tab="calendar" active={tab === 'calendar'} />
         <button aria-label="Quick add" onClick={() => openQuickAdd()}
-                className="mx-2 flex h-12 w-12 items-center justify-center rounded-full bg-accent text-white transition-transform active:scale-90">
+                className="mx-2 flex h-12 w-12 items-center justify-center rounded-full bg-accent text-on-accent transition-transform active:scale-90">
           <Icon d="M12 5v14M5 12h14" />
         </button>
         <TabLink tab="activity" active={tab === 'activity'} />

@@ -24,7 +24,7 @@ function Page({ title, subtitle, children }: { title: string; subtitle?: string;
 }
 
 const inputCls = 'h-12 w-full rounded-xl border border-line bg-surface px-3 text-fg outline-none focus:border-accent'
-const btnCls = 'h-12 w-full rounded-xl bg-accent font-semibold text-white active:scale-[0.98] transition-transform disabled:opacity-60'
+const btnCls = 'h-12 w-full rounded-xl bg-accent font-semibold text-on-accent active:scale-[0.98] transition-transform disabled:opacity-60'
 
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (

@@ -70,7 +70,7 @@ export function DaySheet({ date, data, today, onClose, onPay, onOpenEntry, onOpe
                       </span>
                     </button>
                     <Amount paise={i.remaining_paise} tone={i.direction === 'receive' ? 'in' : 'out'} className="shrink-0 font-semibold" />
-                    <button onClick={() => onPay(i)} aria-label={`${i.direction === 'receive' ? 'Receive' : 'Pay'} ${i.title}`} className="min-h-11 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white">
+                    <button onClick={() => onPay(i)} aria-label={`${i.direction === 'receive' ? 'Receive' : 'Pay'} ${i.title}`} className="min-h-11 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-on-accent">
                       {i.direction === 'receive' ? 'Receive' : 'Pay'}
                     </button>
                   </li>

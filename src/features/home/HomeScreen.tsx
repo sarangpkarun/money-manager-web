@@ -69,7 +69,7 @@ export default function HomeScreen() {
     <div className="space-y-4 pb-6">
       <div className="flex items-center justify-between px-4 pt-6">
         <h1 className="text-3xl font-bold">Hello{profile?.name ? `, ${profile.name}` : ''}</h1>
-        <Link to="/settings" aria-label="Settings" className="flex h-11 w-11 items-center justify-center rounded-full bg-accent font-semibold text-white">
+        <Link to="/settings" aria-label="Settings" className="flex h-11 w-11 items-center justify-center rounded-full bg-accent font-semibold text-on-accent">
           {(profile?.name ?? '?').slice(0, 1).toUpperCase()}
         </Link>
       </div>
@@ -81,16 +81,16 @@ export default function HomeScreen() {
           <button aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))} className="h-11 w-11 text-xl">›</button>
         </div>
         <button onClick={() => setFilterOpen(true)} aria-label={filterCount ? `Filters, ${filterCount} active` : 'Filters'}
-                className={`relative h-11 w-11 rounded-xl border ${filterCount ? 'border-accent bg-accent text-white' : 'border-line bg-surface-2'}`}>
+                className={`relative h-11 w-11 rounded-xl border ${filterCount ? 'border-accent bg-accent text-on-accent' : 'border-line bg-surface-2'}`}>
           <span aria-hidden>⚙︎</span>
-          {filterCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-money-red px-1 text-xs text-white">{filterCount}</span>}
+          {filterCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-money-red px-1 text-xs text-on-accent">{filterCount}</span>}
         </button>
       </div>
 
       {dash.isError && !d ? (
         <div role="alert" className="mx-4 rounded-2xl bg-surface p-4 text-center">
           <p className="mb-3">Couldn't load your dashboard.</p>
-          <button onClick={() => void dash.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-white">Retry</button>
+          <button onClick={() => void dash.refetch()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Retry</button>
         </div>
       ) : !d ? (
         <div className="space-y-4 px-4" aria-busy="true" aria-label="Loading dashboard">
@@ -99,7 +99,7 @@ export default function HomeScreen() {
       ) : empty ? (
         <EmptyState title={filterCount ? 'Nothing matches' : `Nothing in ${monthLabel(month)}`}
                     hint={filterCount ? 'Try clearing the filters.' : 'Add an expense to see your month take shape.'}
-                    action={<button onClick={() => openQuickAdd()} className="min-h-11 rounded-full bg-accent px-5 text-white">Add expense</button>} />
+                    action={<button onClick={() => openQuickAdd()} className="min-h-11 rounded-full bg-accent px-5 text-on-accent">Add expense</button>} />
       ) : (
         order.map(render)
       )}
