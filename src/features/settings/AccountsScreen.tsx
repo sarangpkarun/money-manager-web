@@ -68,7 +68,7 @@ function AccountSheet({ account, onClose }: { account: Account | 'new'; onClose:
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title={editing ? `Edit ${editing.name}` : 'New account'}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title={editing ? `Edit ${editing.name}` : 'New account'} size="full">
       <div className="space-y-4">
         <Field label="Name" error={errors.name}><input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} autoComplete="off" /></Field>
         <Field label="Type">

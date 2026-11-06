@@ -94,22 +94,10 @@ button {
 html[data-keyboard='open'] .sheet-body {
   --sheet-pb: 0.5rem;
 }
-/* a primary action that stays at the bottom of the visible sheet, just above the keyboard */
-.sheet-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  margin: 0.5rem -1rem calc(-1 * var(--sheet-pb));
-  padding: 0.5rem 1rem var(--sheet-pb);
-  background: var(--surface);
-  box-shadow: 0 -10px 8px -8px rgb(0 0 0 / 0.12);
-}
-/* with the keyboard up, space is tight: fold away what is not needed while typing and tighten the form */
-html[data-keyboard='open'] [data-hide-on-keyboard] {
-  display: none;
-}
-html[data-keyboard='open'] .compact-on-keyboard > :not(:last-child) {
-  margin-block-end: 0.625rem;
+/* full-size form sheets: the keyboard covers the lower part, so the scroll area gets that much extra room at the end and every field
+   (and Save) can be scrolled up above the keyboard */
+.sheet-body-full {
+  padding-bottom: calc(var(--sheet-pb) + var(--kb, 0px));
 }
 .tabular {
   font-variant-numeric: tabular-nums;

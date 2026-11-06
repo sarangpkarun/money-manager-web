@@ -1,6 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it, vi } from 'vitest'
-import { KEYBOARD_MIN, installViewportVars, keyboardInset, type ViewportEnv } from './visualViewport'
+import { KEYBOARD_MIN, dismissKeyboard, installViewportVars, keyboardInset, type ViewportEnv } from './visualViewport'
 
 describe('keyboardInset', () => {
   it('is 0 without a keyboard or without visualViewport', () => {
@@ -101,5 +101,29 @@ describe('installViewportVars', () => {
     expect(t.dataset.keyboard).toBeUndefined()
     expect(t.listeners.resize).toEqual([])
     expect(t.listeners.scroll).toEqual([])
+  })
+})
+
+describe('dismissKeyboard', () => {
+  it('blurs a focused text field, select or textarea', () => {
+    for (const tag of ['input', 'textarea', 'select']) {
+      const el = document.createElement(tag)
+      document.body.appendChild(el)
+      el.focus()
+      expect(document.activeElement).toBe(el)
+      dismissKeyboard()
+      expect(document.activeElement).not.toBe(el)
+      el.remove()
+    }
+  })
+  it('leaves buttons and the page alone', () => {
+    const b = document.createElement('button')
+    document.body.appendChild(b)
+    b.focus()
+    dismissKeyboard()
+    expect(document.activeElement).toBe(b)
+    b.remove()
+    expect(() => dismissKeyboard()).not.toThrow()
+    expect(() => dismissKeyboard({ activeElement: null })).not.toThrow()
   })
 })

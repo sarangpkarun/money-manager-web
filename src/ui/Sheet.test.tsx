@@ -12,28 +12,59 @@ beforeAll(() => {
 })
 afterEach(() => vi.restoreAllMocks())
 
-const open = () => render(<Sheet open onOpenChange={() => undefined} title="Test sheet"><input aria-label="Name" /><button>Other</button><div className="sheet-footer"><button>Save</button></div></Sheet>)
+const open = (props: Partial<React.ComponentProps<typeof Sheet>> = {}) => render(
+  <Sheet open onOpenChange={() => undefined} title="Test sheet" {...props}><input aria-label="Name" /><button>Other</button><button>Save</button></Sheet>,
+)
 
-describe('Sheet keyboard handling', () => {
-  it('sits on top of the keyboard and never grows taller than the visible area (CSS variables from lib/visualViewport)', () => {
+describe('Sheet sizes', () => {
+  it('auto: a bottom sheet capped at 92% of the screen, no close button, not positioned by the keyboard', () => {
     open()
-    const style = screen.getByRole('dialog').getAttribute('style') ?? ''
-    expect(style).toContain('bottom: var(--kb, 0px)')
-    expect(style).toContain('--vv-h')
-    expect(style).toContain('min(92%')
+    const d = screen.getByRole('dialog')
+    expect(d).toHaveAttribute('data-size', 'auto')
+    expect(d).toHaveClass('max-h-[92%]', 'bottom-0')
+    expect(d.getAttribute('style') ?? '').not.toContain('--kb')
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(document.querySelector('.sheet-body-full')).toBeNull()
   })
 
-  it('has the scrolling body and a sticky footer hook for a primary action', () => {
-    open()
-    expect(document.querySelector('.sheet-body')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Save' }).parentElement).toHaveClass('sheet-footer')
+  it('full: from just below the status bar to the bottom edge; nothing about the keyboard moves or resizes it', () => {
+    open({ size: 'full' })
+    const d = screen.getByRole('dialog')
+    expect(d).toHaveAttribute('data-size', 'full')
+    expect(d).toHaveClass('bottom-0')
+    expect(d).not.toHaveClass('max-h-[92%]')
+    const style = d.getAttribute('style') ?? ''
+    expect(style).toMatch(/top: calc\((12px \+ env\(safe-area-inset-top, 0px\)|env\(safe-area-inset-top, 0px\) \+ 12px)\)/)
+    expect(style).not.toContain('--kb')
+    expect(style).not.toContain('--vv-h')
   })
 
+  it('full: the scrolling body is a column with room at the end for the keyboard', () => {
+    open({ size: 'full' })
+    const body = document.querySelector('.sheet-body')!
+    expect(body).toHaveClass('sheet-body-full', 'flex', 'flex-col', 'overflow-y-auto')
+  })
+
+  it('full: a Close button mirrors the pull-down gesture', async () => {
+    const onOpenChange = vi.fn()
+    open({ size: 'full', onOpenChange })
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Close' }))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('keeps the title for screen readers when it is hidden', () => {
+    open({ size: 'full', hideTitle: true })
+    expect(screen.getByRole('dialog', { name: 'Test sheet' })).toBeInTheDocument()
+    expect(screen.getAllByText('Test sheet').every((el) => el.classList.contains('sr-only'))).toBe(true)
+  })
+})
+
+describe('focus', () => {
   it('scrolls a newly focused field into view once the keyboard has appeared; other elements are left alone', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
-    open()
+    open({ size: 'full' })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await user.click(screen.getByRole('button', { name: 'Other' }))
     act(() => { vi.advanceTimersByTime(400) })

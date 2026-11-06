@@ -48,7 +48,7 @@ export function FilterSheet({ filters, accounts, categories, hideDate = false, o
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title="Filters">
+    <Sheet open onOpenChange={(o) => !o && onClose()} title="Filters" size="full">
       <div className="space-y-5 pb-2">
         {!hideDate && (
           <Group title="Date">

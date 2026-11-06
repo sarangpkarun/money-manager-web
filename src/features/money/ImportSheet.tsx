@@ -30,7 +30,7 @@ export function ImportSheet({ existing, onClose }: { existing: PersonLike[]; onC
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title="Import people" description="One person per line: name, then an optional phone number.">
+    <Sheet open onOpenChange={(o) => !o && onClose()} title="Import people" description="One person per line: name, then an optional phone number." size="full">
       <div className="space-y-3">
         <textarea aria-label="People to import" className={`${inputCls} h-32 py-2`} placeholder={'Asha, 98765 43210\nRavi Kumar'} value={text} onChange={(e) => setText(e.target.value)} />
         <label className={`${secondaryBtn} flex cursor-pointer items-center justify-center`}>

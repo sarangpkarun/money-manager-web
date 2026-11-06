@@ -49,7 +49,7 @@ export function PersonSheet({ personId, today, onOpenEntry, onClose }: { personI
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title={personId ? (person?.name ?? 'Person') : 'Add person'}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title={personId ? (person?.name ?? 'Person') : 'Add person'} size="full">
       <div className="space-y-4">
         {person && (person.owed_to_me_paise > 0 || person.i_owe_paise > 0) && (
           <div className="grid grid-cols-2 gap-3 rounded-2xl bg-surface-2 p-3 text-center">

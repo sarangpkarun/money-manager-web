@@ -32,7 +32,7 @@ function CategorySheet({ category, kind, onClose }: { category: Category | 'new'
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title={editing ? `Edit ${editing.name}` : `New ${kind} category`}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title={editing ? `Edit ${editing.name}` : `New ${kind} category`} size="full">
       <div className="space-y-4">
         <Field label="Name" error={errors.name}><input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} autoComplete="off" /></Field>
         <div role="radiogroup" aria-label="Icon" className="flex flex-wrap gap-2">

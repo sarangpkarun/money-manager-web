@@ -57,7 +57,7 @@ export function SkipSheet({ entryId, rows, seq, today, onClose }: Common & { seq
     } catch (e) { setError((e as Error).message) }
   }
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title="Skip a month" description={`From instalment #${seq}`}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title="Skip a month" description={`From instalment #${seq}`} size="full">
       <div className="space-y-3">
         <Preview lines={lines} error={error} />
         <button className={primaryBtn} disabled={edit.isPending} onClick={() => void run()}>Skip month</button>
@@ -87,7 +87,7 @@ export function ChangeAmountSheet({ entryId, rows, seq, today, onClose }: Common
     } catch (e) { setError((e as Error).message) }
   }
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title="Change amount" description={`Instalment #${seq} is ${formatMoney(row.due_paise)}`}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title="Change amount" description={`Instalment #${seq} is ${formatMoney(row.due_paise)}`} size="full">
       <div className="space-y-3">
         <Field label="New amount (₹)"><input className={inputCls} inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} aria-label="New amount" /></Field>
         <Preview lines={lines} error={error ?? result.error} />
@@ -126,7 +126,7 @@ export function ExtraPaymentSheet({ entryId, rows, today, defaultAccountId, onCl
     } catch (e) { setError((e as Error).message) }
   }
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title="Extra payment" description="Shortens the plan: it is taken off the last instalments. This cannot be undone.">
+    <Sheet open onOpenChange={(o) => !o && onClose()} title="Extra payment" description="Shortens the plan: it is taken off the last instalments. This cannot be undone." size="full">
       <div className="space-y-3">
         <Field label="Amount (₹)" error={result && result.error ? result.error : undefined}>
           <input className={inputCls} inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} aria-label="Extra amount" autoComplete="off" />
@@ -155,7 +155,7 @@ export function EstimateSheet({ rows, today, onClose }: Omit<Common, 'entryId'>)
     try { return prepayEstimate(rows, today, { mode: 'part', amount: partAmount }) } catch { return null }
   }, [rows, today, partAmount])
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title="Prepay estimates" description="Estimates only. Your lender's figure can differ slightly.">
+    <Sheet open onOpenChange={(o) => !o && onClose()} title="Prepay estimates" description="Estimates only. Your lender's figure can differ slightly." size="full">
       <div className="space-y-4">
         <section aria-label="Foreclose" className="space-y-1 rounded-2xl bg-surface-2 p-3 text-sm">
           <h3 className="font-medium">Close the plan today</h3>

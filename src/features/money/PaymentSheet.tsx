@@ -53,7 +53,7 @@ export function PaymentSheet({ entryId, direction, remaining, today, defaultAcco
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title={receiving ? 'Receive money' : 'Pay back'} description={targetSeq ? `Instalment #${targetSeq} · ${formatMoney(remaining)} left in total` : `${formatMoney(remaining)} left`}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title={receiving ? 'Receive money' : 'Pay back'} description={targetSeq ? `Instalment #${targetSeq} · ${formatMoney(remaining)} left in total` : `${formatMoney(remaining)} left`} size="full">
       <div className="space-y-4">
         <Field label="Amount (₹)" error={error ?? undefined} hint={parsed.preview ?? undefined}>
           <input className={inputCls} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Amount" />

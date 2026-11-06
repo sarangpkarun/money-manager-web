@@ -238,7 +238,7 @@ function QuickAddForm() {
   }
 
   return (
-    <div className="compact-on-keyboard space-y-4" data-testid="quick-add">
+    <div className="flex flex-1 shrink-0 flex-col gap-4" data-testid="quick-add">
       {editing ? <h2 className="text-lg font-semibold">Edit transaction</h2> : (
         <div role="radiogroup" aria-label="Type" className="grid grid-cols-5 gap-1 rounded-xl bg-surface-2 p-1">
           {KINDS.map((k) => (
@@ -252,7 +252,7 @@ function QuickAddForm() {
       )}
 
       {!editing && (
-        <div className="flex justify-center" data-hide-on-keyboard>
+        <div className="flex justify-center">
           <Chip onClick={() => { setQuickAddOpen(false); setEmiOpen(true) }}>🛍 EMI / instalments</Chip>
         </div>
       )}
@@ -260,7 +260,7 @@ function QuickAddForm() {
       <div>
         <div className="flex items-center justify-center gap-1">
           <span className="text-4xl text-muted" aria-hidden>₹</span>
-          <input ref={amountRef} autoFocus aria-label="Amount" inputMode="decimal" autoComplete="off" placeholder="0" value={form.amount}
+          <input ref={amountRef} autoFocus aria-label="Amount" inputMode="decimal" enterKeyHint="done" autoComplete="off" placeholder="0" value={form.amount}
                  onChange={(e) => set('amount', e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void submit()}
                  className="tabular w-48 bg-transparent text-center text-5xl font-bold outline-none placeholder:text-muted/50" />
         </div>
@@ -391,9 +391,7 @@ function QuickAddForm() {
       {more.notes && <Field label="Note"><input className={inputCls} value={form.notes} onChange={(e) => set('notes', e.target.value)} autoComplete="off" /></Field>}
       {!lending && more.tags && <Field label="Tags" hint="Separate with spaces or commas"><input className={inputCls} value={form.tags} onChange={(e) => set('tags', e.target.value)} autoComplete="off" /></Field>}
 
-      <div className="sheet-footer">
-        <button type="button" className={primaryBtn} onClick={() => void submit()}>{editing ? 'Save changes' : 'Save'}</button>
-      </div>
+      <button type="button" className={`${primaryBtn} mt-auto`} onClick={() => void submit()}>{editing ? 'Save changes' : 'Save'}</button>
     </div>
   )
 }
@@ -402,7 +400,7 @@ function QuickAddForm() {
 export default function QuickAddSheet() {
   const { quickAddOpen, setQuickAddOpen } = useUi()
   return (
-    <Sheet open={quickAddOpen} onOpenChange={setQuickAddOpen} title="Quick add" hideTitle onOpenAutoFocus={(e) => e.preventDefault()}>
+    <Sheet open={quickAddOpen} onOpenChange={setQuickAddOpen} title="Quick add" hideTitle size="full" onOpenAutoFocus={(e) => e.preventDefault()}>
       {quickAddOpen && <QuickAddForm />}
     </Sheet>
   )

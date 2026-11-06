@@ -1,10 +1,10 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createUser, deleteUser, login, type E2EUser } from './helpers'
 
 /**
- * A desktop browser cannot raise the iPhone keyboard, so this checks the layout contract the real keyboard relies on:
- * lib/visualViewport.ts publishes --kb (keyboard height) and --vv-h (visible height) on <html>; the sheet must then sit on top of
- * the keyboard, fit in what is left, and keep Save in view. The variable maths is unit-tested separately; the real device check is manual.
+ * Quick Add is a full-height form sheet. The keyboard never moves or resizes it; it covers the lower part, where Save lives.
+ * A desktop browser cannot raise the iPhone keyboard, so these tests publish the same CSS variable the app does (--kb, see
+ * lib/visualViewport.ts) and check the layout contract. The real keyboard is checked by hand on the phone.
  */
 let user: E2EUser
 test.beforeEach(async () => { user = await createUser('kb') })
@@ -13,72 +13,122 @@ test.afterEach(async () => { await deleteUser(user.id) })
 const KEYBOARD = 336 // a typical iPhone number pad with its accessory bar
 const VIEWPORT = 844
 
-async function raiseKeyboard(page: Page) {
-  await page.evaluate(({ kb, vh }) => {
-    const root = document.documentElement
-    root.style.setProperty('--kb', `${kb}px`)
-    root.style.setProperty('--vv-h', `${vh - kb}px`)
-    root.dataset.keyboard = 'open'
-  }, { kb: KEYBOARD, vh: VIEWPORT })
-}
-async function lowerKeyboard(page: Page) {
-  await page.evaluate(() => {
-    const root = document.documentElement
-    root.style.removeProperty('--kb'); root.style.removeProperty('--vv-h'); delete root.dataset.keyboard
-  })
-}
-/** The sheet slides in with an animation: wait until its bottom edge has settled. */
-const bottomOf = (page: Page) => async () => { const b = await page.getByRole('dialog').boundingBox(); return b ? Math.round(b.y + b.height) : -1 }
-const box = async (page: Page, name: string | RegExp) => (await page.getByRole(name instanceof RegExp ? 'button' : 'button', { name }).boundingBox())!
+const raiseKeyboard = (page: Page) => page.evaluate((kb) => { document.documentElement.style.setProperty('--kb', `${kb}px`); document.documentElement.dataset.keyboard = 'open' }, KEYBOARD)
+const lowerKeyboard = (page: Page) => page.evaluate(() => { document.documentElement.style.removeProperty('--kb'); delete document.documentElement.dataset.keyboard })
 
-test('Quick Add sits on top of the keyboard, fits above it, and Save stays visible, even for the longest form', async ({ page }) => {
-  await login(page, user)
+const sheetBox = async (page: Page) => (await page.getByRole('dialog').boundingBox())!
+/** The sheet slides in with an animation: wait until its top edge has settled. */
+async function openQuickAdd(page: Page) {
   await page.getByRole('button', { name: 'Quick add' }).click()
-  const sheet = page.getByRole('dialog')
-  await expect(sheet).toBeVisible()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect.poll(async () => Math.round((await sheetBox(page)).y + (await sheetBox(page)).height)).toBe(VIEWPORT)
+}
+const bottomOf = async (l: Locator) => { const b = (await l.boundingBox())!; return Math.round(b.y + b.height) }
 
-  // no keyboard: the sheet rests on the bottom of the screen
-  await expect.poll(bottomOf(page)).toBe(VIEWPORT)
+test('the form is full height and does not move or resize when the keyboard opens', async ({ page }) => {
+  await login(page, user)
+  await openQuickAdd(page)
+  const before = await sheetBox(page)
+  expect(before.y).toBeLessThan(40)                       // starts just below the status bar
+  expect(Math.round(before.y + before.height)).toBe(VIEWPORT)
+  expect(before.height).toBeGreaterThan(VIEWPORT - 60)    // almost the whole screen
 
   await raiseKeyboard(page)
-  const free = VIEWPORT - KEYBOARD
-  await expect.poll(bottomOf(page)).toBe(free)             // its bottom edge is the top of the keyboard
-  let s = (await sheet.boundingBox())!
-  expect(s.height).toBeLessThanOrEqual(free)               // never taller than the free area
-  expect(s.y).toBeGreaterThanOrEqual(0)                    // and not pushed off the top
-  const save = await box(page, 'Save')
-  expect(save.y).toBeGreaterThanOrEqual(s.y)
-  expect(save.y + save.height).toBeLessThanOrEqual(free)   // Save is fully above the keyboard
-  await expect(page.getByRole('button', { name: /EMI \/ instalments/ })).toBeHidden() // folded away while typing
-
-  // the longest form: Lent with interest and a due date
-  await page.getByRole('radio', { name: 'Lent' }).click()
-  await page.getByRole('button', { name: /Simple/ }).first().click().catch(() => undefined)
-  s = (await sheet.boundingBox())!
-  expect(s.y + s.height).toBeLessThanOrEqual(free + 1)
-  const save2 = await box(page, 'Save')
-  expect(save2.y + save2.height).toBeLessThanOrEqual(free + 1)
-  expect(save2.y).toBeGreaterThanOrEqual(s.y)
-
-  // keyboard down: back to the bottom, the EMI chip returns
-  await lowerKeyboard(page)
-  await expect.poll(bottomOf(page)).toBe(VIEWPORT)
-  await expect(page.getByRole('button', { name: /EMI \/ instalments/ })).toBeVisible()
+  await page.waitForTimeout(150)
+  const during = await sheetBox(page)
+  expect(Math.round(during.y)).toBe(Math.round(before.y))
+  expect(Math.round(during.height)).toBe(Math.round(before.height))
 })
 
-test('a field far down a long form is reachable by scrolling inside the sheet while the keyboard is up', async ({ page }) => {
+test('Save sits at the bottom of the screen (below the keyboard line), is not sticky, and shows when the keyboard goes away', async ({ page }) => {
+  await login(page, user)
+  await openQuickAdd(page)
+  const save = page.getByRole('button', { name: 'Save', exact: true })
+  const sheet = await sheetBox(page)
+
+  // short form: Save is pinned to the bottom of the sheet
+  expect(Math.abs((await bottomOf(save)) - (VIEWPORT - 16))).toBeLessThan(40)
+
+  // with the keyboard up it is under the keyboard, exactly as the native flow works: tap ✓ and it is there
+  await raiseKeyboard(page)
+  expect((await save.boundingBox())!.y).toBeGreaterThan(VIEWPORT - KEYBOARD)
+  await lowerKeyboard(page)
+  expect(await bottomOf(save)).toBeLessThanOrEqual(VIEWPORT)
+  expect((await save.boundingBox())!.y).toBeGreaterThan(sheet.y)
+
+  // not sticky: it is the last item of the form, not a floating footer
+  const position = await save.evaluate((el) => { let p = '', e: Element | null = el; while (e && !p.includes('sticky')) { p = window.getComputedStyle(e).position; e = e.parentElement } return p })
+  expect(position).not.toBe('sticky')
+})
+
+test('with the keyboard up the form can be scrolled so any field, and Save, can be brought above the keyboard', async ({ page }) => {
+  await login(page, user)
+  await openQuickAdd(page)
+  await page.getByRole('radio', { name: 'Lent' }).click() // the longest form
+  await raiseKeyboard(page)
+  const body = page.getByRole('dialog').locator('.sheet-body')
+  await body.evaluate((el) => { el.scrollTop = el.scrollHeight })
+  const save = page.getByRole('button', { name: 'Save', exact: true })
+  await expect.poll(async () => bottomOf(save)).toBeLessThanOrEqual(VIEWPORT - KEYBOARD + 1)
+  await lowerKeyboard(page)
+  await body.evaluate((el) => { el.scrollTop = el.scrollHeight })
+  await expect(save).toBeVisible()
+})
+
+test('pulling the sheet down closes it, from the handle and from the content, and takes the keyboard away first', async ({ page }) => {
+  await login(page, user)
+  await openQuickAdd(page)
+  await expect(page.getByLabel('Amount')).toBeFocused() // the keypad is up
+
+  const drag = async (fromY: number) => {
+    await page.mouse.move(195, fromY)
+    await page.mouse.down()
+    for (let y = fromY; y <= fromY + 420; y += 30) await page.mouse.move(195, y)
+    await page.mouse.up()
+  }
+  // from the handle at the top
+  const top = await sheetBox(page)
+  await drag(top.y + 8)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  // again, from the form content while it is scrolled to the top
+  await openQuickAdd(page)
+  const second = await sheetBox(page)
+  await drag(second.y + 120)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('the keyboard is dismissed as soon as a pull starts', async ({ page }) => {
+  await login(page, user)
+  await openQuickAdd(page)
+  await expect(page.getByLabel('Amount')).toBeFocused()
+  const top = await sheetBox(page)
+  await page.mouse.move(195, top.y + 8)
+  await page.mouse.down()
+  await page.mouse.move(195, top.y + 40)
+  await page.mouse.move(195, top.y + 80)
+  await expect(page.getByLabel('Amount')).not.toBeFocused()
+  await page.mouse.up()
+})
+
+test('a visible Close button does the same as pulling down', async ({ page }) => {
+  await login(page, user)
+  await openQuickAdd(page)
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('detail sheets stay ordinary bottom sheets (no full-height, no close button)', async ({ page }) => {
   await login(page, user)
   await page.getByRole('button', { name: 'Quick add' }).click()
-  await page.getByRole('radio', { name: 'Borrowed' }).click()
-  await raiseKeyboard(page)
-  const sheet = page.getByRole('dialog')
-  const body = sheet.locator('.sheet-body')
-  const { scrollHeight, clientHeight } = await body.evaluate((el) => ({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }))
-  expect(clientHeight).toBeLessThanOrEqual(VIEWPORT - KEYBOARD) // the scroll area is only as tall as the free space
-  if (scrollHeight > clientHeight) {
-    await body.evaluate((el) => { el.scrollTop = el.scrollHeight })
-  }
-  await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
-  const save = await box(page, 'Save')
-  expect(save.y + save.height).toBeLessThanOrEqual(VIEWPORT - KEYBOARD + 1)
+  await page.getByLabel('Amount').pressSequentially('50')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Added ₹50' })).toBeVisible()
+  await page.getByRole('link', { name: 'Activity' }).click()
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible()
+  await page.getByRole('button', { name: /open details/ }).first().click()
+  const d = page.getByRole('dialog')
+  await expect(d).toHaveAttribute('data-size', 'auto')
+  expect((await d.boundingBox())!.height).toBeLessThan(VIEWPORT * 0.92 + 1)
+  await expect(d.getByRole('button', { name: 'Close' })).toHaveCount(0)
 })

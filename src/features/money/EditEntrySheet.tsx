@@ -32,7 +32,7 @@ export function EditEntrySheet({ entry, onClose }: { entry: EntryDetail; onClose
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title="Edit entry">
+    <Sheet open onOpenChange={(o) => !o && onClose()} title="Edit entry" size="full">
       <div className="space-y-4">
         <Field label="Title"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
         <Field label="Person">

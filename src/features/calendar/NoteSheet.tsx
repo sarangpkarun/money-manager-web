@@ -80,7 +80,7 @@ export function NoteSheet({ note, date, onClose }: { note: CalendarNote | null; 
   }
 
   return (
-    <Sheet open onOpenChange={(o) => !o && onClose()} title={note ? 'Edit' : 'Add note or task'}>
+    <Sheet open onOpenChange={(o) => !o && onClose()} title={note ? 'Edit' : 'Add note or task'} size="full">
       <div className="space-y-4">
         <div role="radiogroup" aria-label="Type" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1">
           {(['task', 'note'] as const).map((k) => (

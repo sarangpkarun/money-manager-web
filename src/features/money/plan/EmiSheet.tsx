@@ -71,8 +71,8 @@ export default function EmiSheet({ open, onClose }: { open: boolean; onClose: ()
   }
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()} title="EMI / instalments" description="Buy now, pay in parts">
-      <div className="space-y-4">
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()} title="EMI / instalments" description="Buy now, pay in parts" size="full">
+      <div className="flex flex-1 shrink-0 flex-col gap-4">
         <div role="radiogroup" aria-label="Kind" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1">
           {([['emi_purchase', 'EMI purchase'], ['instalment', 'Instalments']] as const).map(([v, label]) => (
             <button key={v} role="radio" aria-checked={kind === v} type="button" onClick={() => setKind(v)}
@@ -101,9 +101,7 @@ export default function EmiSheet({ open, onClose }: { open: boolean; onClose: ()
           {errors.account && <p role="alert" className="text-sm text-money-red">{errors.account}</p>}
         </div>
         <div><Chip selected={remind} onClick={() => setRemind(!remind)}>{remind ? '🔔 Reminders on' : '🔕 Reminders off'}</Chip></div>
-        <div className="sheet-footer">
-          <button className={primaryBtn} disabled={create.isPending} onClick={() => void submit()}>Save</button>
-        </div>
+        <button className={`${primaryBtn} mt-auto`} disabled={create.isPending} onClick={() => void submit()}>Save</button>
       </div>
     </Sheet>
   )

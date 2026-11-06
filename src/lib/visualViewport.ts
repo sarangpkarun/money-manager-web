@@ -48,3 +48,9 @@ export function installViewportVars(env: ViewportEnv = { window, root: document.
     delete root.dataset.keyboard
   }
 }
+
+/** Takes the keyboard away by blurring the focused text field (used when a sheet is pulled down, like iOS's interactive dismissal). */
+export function dismissKeyboard(doc: Pick<Document, 'activeElement'> = document): void {
+  const a = doc.activeElement
+  if (a instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) a.blur()
+}
