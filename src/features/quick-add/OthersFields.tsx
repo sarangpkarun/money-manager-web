@@ -56,7 +56,7 @@ export function OthersFields({ rows, onChange, bill, people, today, errors, bloc
                                suggestions={suggestFor(people, rows, r)} onChange={(text, id) => set(r.key, { personText: text, personId: id })} />
                 </div>
                 <input aria-label={`Amount for friend ${n}`} inputMode="decimal" autoComplete="off" value={r.amount} onChange={(e) => set(r.key, { amount: e.target.value })}
-                       placeholder={rows.length === 1 && bill ? String(bill / 100) : 'Amount'} className={`${inputCls} w-28 shrink-0 text-right`} />
+                       placeholder={rows.length === 1 && bill ? String(bill / 100) : 'Amount'} className={`${inputCls} w-28! shrink-0 text-right`} />
                 {rows.length > 1 || !locked ? (
                   <button type="button" aria-label={`Remove friend ${n}`} disabled={locked} onClick={() => onChange(rows.filter((x) => x.key !== r.key))}
                           className="h-12 w-11 shrink-0 rounded-xl bg-surface text-muted disabled:opacity-40">✕</button>
