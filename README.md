@@ -42,6 +42,10 @@ Home's Insights card shows up to five rule-based lines. `insight_facts(p_today)`
 - `pnpm build`, then `node scripts/lighthouse.mjs` (local Supabase running) measures the signed-in Home with Lighthouse's mobile profile and prints the scores; the full report goes to `lighthouse-report/`.
 - Acceptance scenarios from the spec: A `e2e/others.spec.ts` (scenario A), B `e2e/plans.spec.ts` and `e2e/calendar.spec.ts` (scenario B), C `e2e/plans.spec.ts` (scenario C), D `e2e/plans.spec.ts` and `e2e/calendar.spec.ts` (scenario D), E `e2e/quick-add.spec.ts` (scenario E).
 
-## Deploy
-Vercel (SPA rewrites in `vercel.json`) + a Supabase project: `supabase link --project-ref <ref> && supabase db push`.
-Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; configure auth Site URL / redirect URLs and a custom SMTP provider.
+## Deploy and operate
+Vercel (SPA rewrites and security headers in `vercel.json`) + a Supabase project: `supabase link --project-ref <ref> && supabase db push`.
+
+- **[docs/RUNBOOK.md](docs/RUNBOOK.md):** environment variables and secrets, one-time production setup (auth URLs, SMTP, templates, password policy), deploy, backups and restore, rollback, "numbers look wrong", "reminders stopped", key rotation.
+- **[docs/GOING-LIVE.md](docs/GOING-LIVE.md):** entering your real accounts, loans and balances, the weekly reconcile routine, what counts as success.
+- **[docs/ISSUES.md](docs/ISSUES.md):** the dogfood issue list (P0/P1/P2).
+- Commands: `pnpm backup` (weekly, and before every migration push), `pnpm restore:drill` (proves a backup restores), `pnpm health` (is the deployed app up), `pnpm health:data` / `scripts/health.sql` (are the numbers consistent), `pnpm check:secrets`, `pnpm e2e:prod` (production build with the real security headers).
