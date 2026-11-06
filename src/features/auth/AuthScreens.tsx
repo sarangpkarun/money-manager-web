@@ -107,8 +107,8 @@ function Signup() {
         </Field>
         <Field label="Password" error={errors.password?.message}>
           <input {...register('password')} type="password" autoComplete="new-password" className={inputCls} aria-describedby="pw-rule" />
-          <p id="pw-rule" className="mt-1 text-xs text-muted">At least 8 characters, with letters and numbers.</p>
         </Field>
+        <p id="pw-rule" className="-mt-2 text-xs text-muted">At least 8 characters, with letters and numbers.</p>
         <Field label="Confirm password" error={errors.confirm?.message}>
           <input {...register('confirm')} type="password" autoComplete="new-password" className={inputCls} />
         </Field>
@@ -162,8 +162,8 @@ export function ResetPassword() {
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <Field label="New password" error={errors.password?.message}>
           <input {...register('password')} type="password" autoComplete="new-password" className={inputCls} aria-describedby="pw-rule" />
-          <p id="pw-rule" className="mt-1 text-xs text-muted">At least 8 characters, with letters and numbers.</p>
         </Field>
+        <p id="pw-rule" className="-mt-2 text-xs text-muted">At least 8 characters, with letters and numbers.</p>
         <Field label="Confirm password" error={errors.confirm?.message}>
           <input {...register('confirm')} type="password" autoComplete="new-password" className={inputCls} />
         </Field>

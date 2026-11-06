@@ -68,6 +68,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"client_errors": {
+                  Row: {
+                    "app_version": string,"at": string,"id": string,"kind": string,"message": string,"route": string,"stack": string | null,"user_agent": string | null,"user_id": string
+                  }
+                  Insert: {
+                    "app_version"?: string,"at"?: string,"id"?: string,"kind": string,"message": string,"route"?: string,"stack"?: string | null,"user_agent"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "app_version"?: string,"at"?: string,"id"?: string,"kind"?: string,"message"?: string,"route"?: string,"stack"?: string | null,"user_agent"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"entries": {
                   Row: {
                     "category_id": string | null,"created_at": string | null,"direction": Database["public"]['Enums']["entry_dir"],"down_payment_paise": number | null,"due_date": string | null,"id": string,"interest": Database["public"]['Enums']["interest_type"],"kind": Database["public"]['Enums']["entry_kind"],"no_cost": boolean | null,"notes": string | null,"party_name": string | null,"person_id": string | null,"principal_paise": number,"rate_bps": number | null,"remind": boolean,"settled_on": string | null,"source_txn_id": string | null,"start_date": string,"status": Database["public"]['Enums']["entry_status"],"title": string,"total_payable_paise": number,"user_id": string
@@ -557,6 +570,9 @@ isOneToOne: false
                            },
 "money_stats":
 { Args: { "p_today": string }; Returns: Json
+                           },
+"ping":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "plan_change_amount":
 { Args: { "p_base": Json,"p_entry": string,"p_rows": Json }; Returns: {

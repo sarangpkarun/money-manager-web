@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider'
+import { reportBoundary } from '@/lib/errorLogInstall'
+import { ErrorBoundary } from '@/ui/ErrorBoundary'
 import { Shell } from './Shell'
 import { CACHE_BUSTER, persister, queryClient } from './queryClient'
 
@@ -27,7 +29,9 @@ export default function App() {
     <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, buster: CACHE_BUSTER }}>
       <AuthProvider>
         <BrowserRouter>
-          <Gate />
+          <ErrorBoundary onError={reportBoundary}>
+            <Gate />
+          </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </PersistQueryClientProvider>

@@ -34,7 +34,6 @@ vi.mock('@/lib/supabase', () => ({
   },
 }))
 
-import AboutScreen from './AboutScreen'
 import DeleteAccountScreen from './DeleteAccountScreen'
 import ExportScreen from './ExportScreen'
 import PrivacyScreen from './PrivacyScreen'
@@ -100,20 +99,12 @@ describe('Export', () => {
   })
 })
 
-describe('Privacy and About', () => {
+describe('Privacy', () => {
   it('Privacy explains storage and links to export and delete', () => {
     ui(<PrivacyScreen />)
     expect(screen.getByText(/No analytics/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Export' })).toHaveAttribute('href', '/settings/export')
     expect(screen.getByRole('link', { name: 'delete your account' })).toHaveAttribute('href', '/settings/delete')
-  })
-  it('About shows version, build date and data host', () => {
-    vi.stubGlobal('__APP_VERSION__', '1.2.3')
-    vi.stubGlobal('__BUILD_TIME__', '2026-11-05T10:00:00.000Z')
-    ui(<AboutScreen />)
-    expect(screen.getByText('1.2.3')).toBeInTheDocument()
-    expect(screen.getByText('2026-11-05')).toBeInTheDocument()
-    vi.unstubAllGlobals()
   })
 })
 

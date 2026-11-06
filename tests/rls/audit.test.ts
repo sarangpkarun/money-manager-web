@@ -10,6 +10,8 @@ import { sql } from './helpers'
 const SERVICE_ONLY = ['reminder_log']
 /** Functions in `public` that signed-in users may call directly (everything else must not be executable by them). */
 const CALLABLE_HELPERS = ['is_verified', 'claim_push_subscription']
+/** The only functions in `public` anyone may call without signing in: constants that touch no data. */
+const ANON_CALLABLE = ['ping']
 
 const rows = async <T = Record<string, unknown>>(q: string, params: unknown[] = []) => (await sql(q, params)).rows as T[]
 
@@ -67,10 +69,12 @@ describe('database security audit', () => {
     expect(v.filter((x) => !(x.reloptions ?? []).includes('security_invoker=true')).map((x) => x.relname)).toEqual([])
   })
 
-  it('no function in public is executable by anon', async () => {
+  it('the only function in public that anon can execute is the data-free ping', async () => {
     const f = await rows<{ proname: string }>(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                                                where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')`)
-    expect(f.map((x) => x.proname)).toEqual([])
+    expect(f.map((x) => x.proname)).toEqual(ANON_CALLABLE)
+    const ping = (await rows<{ prosrc: string }>(`select prosrc from pg_proc where proname = 'ping' and pronamespace = 'public'::regnamespace`))[0]!
+    expect(ping.prosrc.trim()).toBe("select 'ok'")
   })
 
   it('every SECURITY DEFINER function pins its search_path', async () => {

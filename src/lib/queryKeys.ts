@@ -10,6 +10,7 @@ export const qk = {
   dashboard: (month: string, filters: unknown) => ['dashboard', month, filters] as const,
   /** under 'dashboard' so everything that refreshes Home refreshes the insights too */
   insights: (today: string) => ['dashboard', 'insights', today] as const,
+  clientErrors: ['client-errors'] as const,
   recent: ['recent-txns'] as const,
   calendarAll: ['calendar'] as const,
   calendarMonth: (month: string, filters: unknown) => ['calendar', 'month', month, filters] as const,

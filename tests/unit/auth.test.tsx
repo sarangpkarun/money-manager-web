@@ -19,10 +19,11 @@ describe('auth schemas', () => {
     expect(loginSchema.parse({ email: '  A@B.com ', password: 'x' }).email).toBe('a@b.com')
     expect(loginSchema.safeParse({ email: 'nope', password: 'x' }).success).toBe(false)
   })
-  it('requires matching passwords of 8+ chars', () => {
+  it('requires matching passwords of 8+ chars with letters and numbers', () => {
     expect(signupSchema.safeParse({ email: 'a@b.com', password: 'short', confirm: 'short' }).success).toBe(false)
-    expect(signupSchema.safeParse({ email: 'a@b.com', password: 'longenough', confirm: 'different1' }).success).toBe(false)
-    expect(signupSchema.safeParse({ email: 'a@b.com', password: 'longenough', confirm: 'longenough' }).success).toBe(true)
-    expect(resetSchema.safeParse({ password: 'longenough', confirm: 'longenough' }).success).toBe(true)
+    expect(signupSchema.safeParse({ email: 'a@b.com', password: 'longenough1', confirm: 'different1' }).success).toBe(false)
+    expect(signupSchema.safeParse({ email: 'a@b.com', password: 'longenough1', confirm: 'longenough1' }).success).toBe(true)
+    expect(signupSchema.safeParse({ email: 'a@b.com', password: 'longenough', confirm: 'longenough' }).success).toBe(false) // no digit
+    expect(resetSchema.safeParse({ password: 'longenough1', confirm: 'longenough1' }).success).toBe(true)
   })
 })
