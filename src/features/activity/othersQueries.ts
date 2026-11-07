@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 function useRefreshAll() {
   const qc = useQueryClient()
   return () =>
-    Promise.all([qk.activity, ['activity-summary'], qk.dashboardAll, qk.calendarAll, qk.balances, qk.recent, qk.money, qk.people, qk.peopleBalances, ['title-suggestions']]
+    Promise.all([qk.activity, ['activity-summary'], qk.dashboardAll, qk.calendarAll, qk.balances, qk.recent, qk.money, qk.people, qk.peopleBalances, ['title-suggestions'], ['place-suggestions']]
       .map((queryKey) => qc.invalidateQueries({ queryKey })))
 }
 

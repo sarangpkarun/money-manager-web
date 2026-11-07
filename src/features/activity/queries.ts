@@ -79,10 +79,39 @@ export function useTitleSuggestions(prefix: string) {
   })
 }
 
+export interface PlaceSuggestion { place: string; uses: number }
+
+/** Previously used places, most-used first. An empty prefix lists the most used overall. */
+export function usePlaceSuggestions(prefix: string, enabled = true) {
+  const p = prefix.trim()
+  return useQuery({
+    queryKey: ['place-suggestions', p.toLowerCase()],
+    enabled,
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+    queryFn: async (): Promise<PlaceSuggestion[]> => {
+      let q = supabase.from('transactions').select('place').not('place', 'is', null).neq('place', '')
+      if (p) q = q.ilike('place', `${p.replace(/[\\%_]/g, '\\$&')}%`)
+      const { data, error } = await q.order('date', { ascending: false }).order('created_at', { ascending: false }).limit(300)
+      if (error) throw error
+      const seen = new Map<string, PlaceSuggestion>()
+      for (const r of data ?? []) {
+        const name = (r.place ?? '').trim()
+        if (!name) continue
+        const k = name.toLowerCase()
+        const hit = seen.get(k)
+        if (hit) hit.uses += 1
+        else seen.set(k, { place: name, uses: 1 })
+      }
+      return [...seen.values()].sort((a, b) => b.uses - a.uses).slice(0, 5)
+    },
+  })
+}
+
 function useRefreshAll() {
   const qc = useQueryClient()
   return () =>
-    Promise.all([qk.activity, ['activity-summary'], qk.dashboardAll, qk.calendarAll, qk.balances, qk.recent, ['title-suggestions']].map((queryKey) => qc.invalidateQueries({ queryKey })))
+    Promise.all([qk.activity, ['activity-summary'], qk.dashboardAll, qk.calendarAll, qk.balances, qk.recent, ['title-suggestions'], ['place-suggestions']].map((queryKey) => qc.invalidateQueries({ queryKey })))
 }
 
 type Snapshots = [readonly unknown[], ListData | undefined][]

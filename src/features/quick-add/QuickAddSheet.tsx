@@ -1,7 +1,7 @@
 import { explain } from '@/lib/online'
 import { useMemo, useRef, useState } from 'react'
 import { useAccounts } from '@/features/accounts/queries'
-import { useAddTransaction, useDeleteTransaction, useRecentTransactions, useTitleSuggestions, useUpdateTransaction, type TitleSuggestion } from '@/features/activity/queries'
+import { useAddTransaction, useDeleteTransaction, usePlaceSuggestions, useRecentTransactions, useTitleSuggestions, useUpdateTransaction, type TitleSuggestion } from '@/features/activity/queries'
 import { useCategories } from '@/features/categories/queries'
 import { normaliseName, matchPeople } from '@/features/money/people'
 import { useAddExpenseForOthers, useDeleteTransactionWithOthers, useUpdateExpenseForOthers } from '@/features/activity/othersQueries'
@@ -88,6 +88,7 @@ function QuickAddForm() {
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [titleFocused, setTitleFocused] = useState(false)
+  const [placeFocused, setPlaceFocused] = useState(false)
   const [more, setMore] = useState({ place: !!(editing?.place), notes: !!(editing?.notes), tags: !!(editing?.tags?.length) })
   const amountRef = useRef<HTMLInputElement>(null)
 
@@ -109,6 +110,8 @@ function QuickAddForm() {
   const shownSuggestions = suggestions.filter((s) => s.title.toLowerCase() !== form.title.trim().toLowerCase())
   const toAccount = accounts.find((a) => a.id === form.toAccountId)
 
+  const placeMatches = (usePlaceSuggestions(form.place, placeFocused).data ?? [])
+    .filter((x) => x.place.toLowerCase() !== form.place.trim().toLowerCase())
   const applySuggestion = (s: TitleSuggestion) => {
     setForm((f) => ({
       ...f, title: s.title,
@@ -387,7 +390,27 @@ function QuickAddForm() {
         </div>
       )}
 
-      {!lending && more.place && <Field label="Place"><input className={inputCls} value={form.place} onChange={(e) => set('place', e.target.value)} autoComplete="off" /></Field>}
+      {!lending && more.place && (
+        <Field label="Place">
+          <div className="relative">
+            <input className={inputCls} value={form.place} onChange={(e) => set('place', e.target.value)} autoComplete="off"
+                   onFocus={() => setPlaceFocused(true)} onBlur={() => setTimeout(() => setPlaceFocused(false), 150)} />
+            {placeFocused && placeMatches.length > 0 && (
+              <ul role="listbox" aria-label="Place suggestions" className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
+                {placeMatches.map((x) => (
+                  <li key={x.place}>
+                    <button type="button" role="option" aria-selected={false} onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => { set('place', x.place); setPlaceFocused(false) }}
+                            className="flex min-h-11 w-full items-center justify-between px-3 text-left">
+                      <span>{x.place}</span><span className="text-xs text-muted">{x.uses}×</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Field>
+      )}
       {more.notes && <Field label="Note"><input className={inputCls} value={form.notes} onChange={(e) => set('notes', e.target.value)} autoComplete="off" /></Field>}
       {!lending && more.tags && <Field label="Tags" hint="Separate with spaces or commas"><input className={inputCls} value={form.tags} onChange={(e) => set('tags', e.target.value)} autoComplete="off" /></Field>}
 
